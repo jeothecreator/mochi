@@ -116,3 +116,7 @@ The pet redraws at most 10×/s and only when its frame changes; senses poll at 2
 
 - Shortcut clashes with *other* apps can't be detected by macOS's hot-key API.
 - App detection is by bundle ID; browser-based tools (Google Slides, web Canva) show up as your browser, not as slides/design.
+
+## License
+
+[MIT](LICENSE) — free to use, modify and share.
