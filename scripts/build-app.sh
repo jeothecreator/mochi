@@ -50,8 +50,15 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-echo "▶ Signing (ad-hoc)…"
-codesign --force --sign - "$APP" >/dev/null
+source scripts/signing.sh
+IDENTITY="$(mochi_identity)"
+if [[ -n "$IDENTITY" ]]; then
+    echo "▶ Signing with $IDENTITY (hardened runtime)…"
+else
+    echo "▶ Signing (ad-hoc — no Developer ID certificate found; see docs/SIGNING.md)…"
+fi
+mochi_sign "$APP" 2>&1 | grep -v "replacing existing signature" || true
+codesign --verify --strict "$APP"
 
 echo "✔ Built $APP"
 echo "  Run it:      open $APP"

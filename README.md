@@ -50,6 +50,8 @@ open build/Mochi.app        # first launch: hatch your egg ✨
 ./scripts/make-dmg.sh       # → build/Mochi-<version>.dmg (set MOCHI_VERSION to change the version)
 ```
 
+With a Developer ID certificate + notary profile, `make-dmg.sh` also signs and notarizes so every Mac trusts it — see [docs/SIGNING.md](docs/SIGNING.md).
+
 Mochi lives in the **menu bar** (no Dock icon). Copy it to `/Applications` if you want Launch at Login.
 
 ## What it does
