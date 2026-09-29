@@ -203,11 +203,13 @@ final class PetController {
         if let a = accessoryOverride { l.accessory = a }
         if let h = heldOverride { l.held = h }
         if !life.isUnlocked(l.accessory) { l.accessory = .none }
+        if !life.isUnlocked(l.held) { l.held = .none }
         return l
     }
 
     var effectiveColors: SpriteColors {
-        SpriteColors.make(paletteOverride ?? prefs.paletteBase)
+        let base = life.isUnlocked(prefs.palettePreset) ? prefs.paletteBase : PalettePreset.espresso.base!
+        return SpriteColors.make(paletteOverride ?? base)
     }
 
     // MARK: Prefs & size

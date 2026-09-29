@@ -231,14 +231,18 @@ struct CreaturePage: View {
             }
         }
         Card(title: "HOLDING") {
-            ThumbGrid(items: HeldItem.allCases, selection: $prefs.held, label: { $0.label }) { item in
+            ThumbGrid(items: HeldItem.allCases, selection: Binding(get: { prefs.held }, set: { h in
+                if PetLife.shared.isUnlocked(h) { prefs.held = h }
+            }), label: { PetLife.shared.isUnlocked($0) ? $0.label : "Shop" }, locked: { !PetLife.shared.isUnlocked($0) }) { item in
                 var look = prefs.look
                 let _ = (look.held = item)
                 SpriteImage(look: look, colors: prefs.spriteColors, size: 56)
             }
         }
         Card(title: "PALETTE") {
-            ThumbGrid(items: PalettePreset.allCases, selection: $prefs.palettePreset, label: { $0.label }) { preset in
+            ThumbGrid(items: PalettePreset.allCases, selection: Binding(get: { prefs.palettePreset }, set: { p in
+                if PetLife.shared.isUnlocked(p) { prefs.palettePreset = p }
+            }), label: { PetLife.shared.isUnlocked($0) ? $0.label : "\($0.label) · Shop" }, locked: { !PetLife.shared.isUnlocked($0) }) { preset in
                 let base = preset.base ?? prefs.paletteBase
                 SpriteImage(look: prefs.look, colors: SpriteColors.make(base), size: 56)
             }
@@ -536,6 +540,14 @@ struct SensesPage: View {
                 Text("Rolled once per active minute: common 1/10 · uncommon 1/50 · rare 1/250 · legendary 1/1000. “Often” doubles the odds.").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             Toggle("Go exploring when I'm away for 30 minutes", isOn: $prefs.exploring)
+        }
+        Card(title: "FOCUS TIMER") {
+            Stepper("Focus length: \(prefs.focusMinutes) min", value: $prefs.focusMinutes, in: 5...90, step: 5)
+                .frame(maxWidth: 300, alignment: .leading)
+            Stepper("Break length: \(prefs.breakMinutes) min", value: $prefs.breakMinutes, in: 1...30)
+                .frame(maxWidth: 300, alignment: .leading)
+            Toggle("Wear headphones and stay quiet while focusing", isOn: $prefs.focusQuiet)
+            Note(text: "Start one with right-click → Focus. The countdown shows in the menu bar; each finished session is +3 🪙.", symbol: "timer")
         }
         Card(title: "SENSES") {
             Toggle("Watch my cursor", isOn: $prefs.watchCursor)

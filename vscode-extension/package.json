@@ -1,0 +1,67 @@
+{
+  "name": "mochi-pet",
+  "displayName": "Mochi \u2014 pixel pet reactions",
+  "description": "Your Mochi desktop pet reacts to errors in the editor and to build/test tasks. Requires the Mochi Mac app.",
+  "version": "1.1.0",
+  "publisher": "jeothecreator",
+  "license": "MIT",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jeothecreator/mochi"
+  },
+  "homepage": "https://github.com/jeothecreator/mochi",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "pet",
+    "mochi",
+    "pixel",
+    "fun",
+    "macos"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "mochi.cheer",
+        "title": "Mochi: Send a test cheer"
+      },
+      {
+        "command": "mochi.oops",
+        "title": "Mochi: Send a test error"
+      }
+    ],
+    "configuration": {
+      "title": "Mochi",
+      "properties": {
+        "mochi.reactToErrors": {
+          "type": "boolean",
+          "default": true,
+          "description": "React when saving leaves errors in your code, and celebrate when they're all fixed."
+        },
+        "mochi.errorScope": {
+          "type": "string",
+          "enum": [
+            "workspace",
+            "activeFile"
+          ],
+          "default": "workspace",
+          "description": "Count errors across the whole workspace or only in the file you're editing."
+        },
+        "mochi.reactToTasks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Cheer or faint when build/test tasks finish."
+        }
+      }
+    }
+  }
+}

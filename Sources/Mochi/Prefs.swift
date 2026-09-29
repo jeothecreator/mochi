@@ -72,6 +72,9 @@ final class Prefs: ObservableObject {
     @Published var alwaysOnTop: Bool { didSet { d.set(alwaysOnTop, forKey: "alwaysOnTop") } }
     @Published var allSpaces: Bool { didSet { d.set(allSpaces, forKey: "allSpaces") } }
     @Published var everyDisplay: Bool { didSet { d.set(everyDisplay, forKey: "everyDisplay") } }
+    @Published var focusMinutes: Int { didSet { d.set(focusMinutes, forKey: "focusMinutes") } }
+    @Published var breakMinutes: Int { didSet { d.set(breakMinutes, forKey: "breakMinutes") } }
+    @Published var focusQuiet: Bool { didSet { d.set(focusQuiet, forKey: "focusQuiet") } }
     @Published var hotKeyEnabled: Bool { didSet { d.set(hotKeyEnabled, forKey: "hotKeyEnabled") } }
     @Published var hotKey: HotKeyCombo {
         didSet { if let data = try? JSONEncoder().encode(hotKey) { d.set(data, forKey: "hotKey") } }
@@ -142,6 +145,9 @@ final class Prefs: ObservableObject {
         alwaysOnTop = bool("alwaysOnTop", true)
         allSpaces = bool("allSpaces", true)
         everyDisplay = bool("everyDisplay", false)
+        focusMinutes = min(90, max(5, int("focusMinutes", 25)))
+        breakMinutes = min(30, max(1, int("breakMinutes", 5)))
+        focusQuiet = bool("focusQuiet", true)
         hotKeyEnabled = bool("hotKeyEnabled", true)
         if let data = d.data(forKey: "hotKey"), let combo = try? JSONDecoder().decode(HotKeyCombo.self, from: data) {
             hotKey = combo
@@ -173,12 +179,13 @@ final class Prefs: ObservableObject {
     }
 
     func randomizeCreature() {
+        let life = PetLife.shared
         species = Species.allCases.randomElement()!
         eyeStyle = EyeStyle.allCases.randomElement()!
-        accessory = Accessory.allCases.randomElement()!
-        held = HeldItem.allCases.randomElement()!
+        accessory = Accessory.allCases.filter { life.isUnlocked($0) }.randomElement() ?? .none
+        held = HeldItem.allCases.filter { life.isUnlocked($0) }.randomElement() ?? .none
         blush = Double.random(in: 0...1) < 0.8
-        palettePreset = PalettePreset.allCases.filter { $0 != .custom }.randomElement()!
+        palettePreset = PalettePreset.allCases.filter { $0 != .custom && life.isUnlocked($0) }.randomElement()!
     }
 }
 

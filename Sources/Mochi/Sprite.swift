@@ -34,6 +34,7 @@ enum EyeStyle: String, CaseIterable, Identifiable {
 enum Accessory: String, CaseIterable, Identifiable {
     case none, beret, beanie, bow, crown, flower, headphones, glasses, partyHat, flowerCrown, bandana
     case wizard, halo, frogHat, witchHat
+    case sunglasses, chefHat, cowboyHat, starClip
     var id: String { rawValue }
     var label: String {
         switch self {
@@ -52,6 +53,10 @@ enum Accessory: String, CaseIterable, Identifiable {
         case .halo: return "Halo"
         case .frogHat: return "Frog hat"
         case .witchHat: return "Witch hat"
+        case .sunglasses: return "Sunglasses"
+        case .chefHat: return "Chef hat"
+        case .cowboyHat: return "Cowboy hat"
+        case .starClip: return "Star clip"
         }
     }
 
@@ -64,13 +69,15 @@ enum Accessory: String, CaseIterable, Identifiable {
         case .halo: return "Be very, very persistent with pokes."
         case .frogHat: return "Give your pet something golden."
         case .witchHat: return "Visit in the spookiest hour."
-        default: return ""
+        default:
+            if let item = ShopItem.allCases.first(where: { $0.accessory == self }) { return "Buy it in the Shop · \(item.price) coins" }
+            return ""
         }
     }
 }
 
 enum HeldItem: String, CaseIterable, Identifiable {
-    case none, mug, boba, matcha, notepad, handheld
+    case none, mug, boba, matcha, notepad, handheld, plant
     var id: String { rawValue }
     var label: String {
         switch self {
@@ -80,6 +87,7 @@ enum HeldItem: String, CaseIterable, Identifiable {
         case .matcha: return "Matcha latte"
         case .notepad: return "Notepad"
         case .handheld: return "Handheld"
+        case .plant: return "Tiny plant"
         }
     }
 }
@@ -133,7 +141,7 @@ struct Pose: Equatable {
 enum Mat: UInt8, CaseIterable {
     case empty, outline, body, shade, highlight, belly, cheek, eye, white
     case accent, accentDark, mug, mugShade, gold, goldDark, leaf, leafDark, tea
-    case shadow, steam, bubble, ink, heart, yellow, purple, purpleDark, black, drop
+    case shadow, steam, bubble, ink, heart, yellow, purple, purpleDark, black, drop, brown, brownDark
 
     /// Solid materials get an automatic outline around them.
     var isSolid: Bool {
@@ -147,7 +155,7 @@ enum Mat: UInt8, CaseIterable {
         "o": .outline, "B": .body, "S": .shade, "H": .highlight, "W": .white, "A": .accent, "a": .accentDark,
         "M": .mug, "m": .mugShade, "G": .gold, "g": .goldDark, "L": .leaf, "l": .leafDark, "T": .tea,
         "k": .eye, "P": .cheek, "h": .heart, "b": .bubble, "i": .ink, "Y": .yellow, "s": .steam,
-        "V": .purple, "U": .purpleDark, "K": .black, "D": .drop,
+        "V": .purple, "U": .purpleDark, "K": .black, "D": .drop, "R": .brown, "r": .brownDark,
     ]
 }
 
@@ -475,6 +483,23 @@ enum SpriteBuilder {
                 let shift = i < 3 ? 3 - i : 0
                 for x in (15 - half + shift)...(16 + half + shift) { g[x, y] = .black }
             }
+        case .sunglasses:
+            for ex in [11 + lx, 19 + lx] {
+                for x in (ex - 1)...(ex + 2) { g[x, eyeBase] = .black; g[x, eyeBase + 1] = .black }
+                g[ex, eyeBase] = .white
+            }
+            for x in (14 + lx)...(17 + lx) { g[x, eyeBase] = .black }
+        case .chefHat:
+            g.stamp(["..WWWWWWWW..", ".WWWWWWWWWW.", "WWWWWWWWWWWW", "WWWWWWWWWWWW", ".WWWWWWWWWW.", "..WWWWWWWW..", "..WWWWWWWW.."],
+                    x: 10, y: topY - 6)
+        case .cowboyHat:
+            for x in 7...24 { g[x, topY] = .brownDark }
+            for x in 8...23 { g[x, topY - 1] = x == 8 || x == 23 ? .brownDark : .accent }
+            for y in (topY - 4)...(topY - 2) {
+                for x in 11...20 where !(y == topY - 4 && (x == 15 || x == 16)) { g[x, y] = .brown }
+            }
+        case .starClip:
+            g.stamp([".Y.", "YYY", ".Y."], x: 19, y: topY)
         }
 
         // Held item.
@@ -525,6 +550,9 @@ enum SpriteBuilder {
         case .notepad:
             g.stamp(paw, x: 20, y: bottomRow - 4)
             prop(.note, x: 22, y: bottomRow - 7)
+        case .plant:
+            g.stamp(paw, x: 20, y: bottomRow - 4)
+            prop(.plant, x: 22, y: bottomRow - 8)
         case .handheld:
             g.stamp(paw, x: 8, y: bottomRow - 3)
             g.stamp(paw, x: 20, y: bottomRow - 3)

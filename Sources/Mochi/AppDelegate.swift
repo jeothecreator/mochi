@@ -10,7 +10,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private(set) var pet: PetController!
     private(set) var director: Director!
     private(set) var home: HomeController!
-    private(set) var quick: QuickTodoController!
+    private(set) var quick: PetPopover!
+    private(set) var game: PetPopover!
+    private var menuBarTimer: Timer?
     private var statusItem: NSStatusItem!
     private var statusMenu = NSMenu()
     private var settingsWindow: NSWindow?
@@ -28,7 +30,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         pet = PetController()
         director = Director(pet: pet)
         home = HomeController(pet: pet, director: director)
-        quick = QuickTodoController(pet: pet, director: director, openList: { [weak self] in self?.openHome(tab: .todo) })
+        quick = PetPopover(pet: pet, width: QuickTodoView.width, title: "Quick to-do")
+        quick.setContent(QuickTodoView(director: director,
+                                       openList: { [weak self] in self?.quick.hide(); self?.openHome(tab: .todo) },
+                                       close: { [weak self] in self?.quick.hide() }))
+        game = PetPopover(pet: pet, width: RPSView.width, title: "Rock, paper, scissors")
+        quick.onShow = { [weak self] in self?.game.hide() }
+        game.onShow = { [weak self] in self?.quick.hide() }
         pet.onClick = { [weak self] in
             guard let self else { return }
             _ = self.director.clicked()
@@ -38,10 +46,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         pet.onMoved = { [weak self] in
             self?.home.followPet()
             self?.quick.follow()
+            self?.game.follow()
             self?.director.petMoved()
         }
 
         setupStatusItem()
+        director.focus.$phase
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.updateMenuBarTimer() }
+            .store(in: &cancellables)
 
         HotKeyManager.shared.onFire = { [weak self] in self?.hotKeyPressed() }
         prefs.$hotKey.combineLatest(prefs.$hotKeyEnabled)
@@ -51,7 +64,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         prefs.$petVisible
             .dropFirst()
             .receive(on: RunLoop.main)
-            .sink { [weak self] visible in if !visible { self?.home.hide(); self?.quick.hide() } }
+            .sink { [weak self] visible in if !visible { self?.home.hide(); self?.quick.hide(); self?.game.hide() } }
             .store(in: &cancellables)
 
         let nc = NotificationCenter.default
@@ -107,6 +120,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc func hidePet() {
         home.hide()
         quick.hide()
+        game.hide()
         prefs.petVisible = false
     }
 
@@ -127,6 +141,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc func headPats() { showPet(); director.pat() }
     @objc func play() { showPet(); director.play() }
+    @objc func playRPS() {
+        showPet()
+        game.setContent(RPSView(director: director, close: { [weak self] in self?.game.hide() }))
+        DispatchQueue.main.async { self.game.show() }
+    }
+    @objc func openShop() { openHome(tab: .shop) }
+    @objc func startFocusMenu(_ sender: NSMenuItem) { showPet(); director.startFocus(minutes: sender.tag) }
+    @objc func stopFocus() { director.stopFocus() }
+    @objc func skipBreak() { director.skipBreak() }
     @objc func nap() { director.nap() }
     @objc func wake() { pet.brain.wake(); pet.perform(.surprised) }
     @objc func giveFromMenu(_ sender: NSMenuItem) {
@@ -230,6 +253,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSApp.mainMenu = main
     }
 
+    /// Shows "🍅 24:59" next to the menu bar icon while a focus session or break is running.
+    private func updateMenuBarTimer() {
+        let running = director.focus.isRunning
+        statusItem.length = running ? NSStatusItem.variableLength : NSStatusItem.squareLength
+        if running {
+            if menuBarTimer == nil {
+                let t = Timer(timeInterval: 1, repeats: true) { [weak self] _ in self?.refreshMenuBarTitle() }
+                RunLoop.main.add(t, forMode: .common)
+                menuBarTimer = t
+            }
+            refreshMenuBarTitle()
+        } else {
+            menuBarTimer?.invalidate()
+            menuBarTimer = nil
+            statusItem.button?.title = ""
+        }
+    }
+
+    private func refreshMenuBarTitle() {
+        let f = director.focus
+        guard f.isRunning else { return }
+        statusItem.button?.imagePosition = .imageLeading
+        statusItem.button?.title = " \(f.phase == .focus ? "🍅" : "☕") \(f.remainingLabel)"
+        statusItem.button?.font = .monospacedDigitSystemFont(ofSize: 12, weight: .medium)
+    }
+
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         statusItem.button?.image = Self.menuBarIcon()
@@ -253,6 +302,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         item.submenu = sub
         return item
     }
+
+    private func focusMenu() -> NSMenuItem {
+        let f = director.focus
+        let title = f.phase == .focus ? "Focus — \(f.remainingLabel) left" : (f.phase == .rest ? "Break — \(f.remainingLabel) left" : "Focus")
+        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        item.image = { let i = PixelIcon.tomato.nsImage; i.size = NSSize(width: 16, height: 16); return i }()
+        let sub = NSMenu()
+        if f.phase == .focus {
+            sub.addItem(target(NSMenuItem(title: "Stop focus", action: #selector(stopFocus), keyEquivalent: "")))
+        } else if f.phase == .rest {
+            sub.addItem(target(NSMenuItem(title: "Skip break", action: #selector(skipBreak), keyEquivalent: "")))
+        }
+        if f.phase != .focus {
+            for m in Array(Set([prefs.focusMinutes, 15, 25, 50])).sorted() {
+                let i = NSMenuItem(title: "Start \(m)-min focus\(m == prefs.focusMinutes ? "  (default)" : "")", action: #selector(startFocusMenu(_:)), keyEquivalent: "")
+                i.tag = m
+                sub.addItem(target(i))
+            }
+        }
+        sub.addItem(.separator())
+        let stats = NSMenuItem(title: "\(life.s.focusSessions) sessions · \(life.s.focusMinutesTotal) min focused", action: nil, keyEquivalent: "")
+        stats.isEnabled = false
+        sub.addItem(stats)
+        item.submenu = sub
+        return item
+    }
+
+    private func playMenu() -> NSMenuItem {
+        let item = NSMenuItem(title: "Play", action: nil, keyEquivalent: "")
+        let sub = NSMenu()
+        sub.addItem(target(NSMenuItem(title: "Zoomies!", action: #selector(play), keyEquivalent: "")))
+        sub.addItem(target(NSMenuItem(title: "Rock, Paper, Scissors…", action: #selector(playRPS), keyEquivalent: "")))
+        item.submenu = sub
+        return item
+    }
+
+    private func target(_ i: NSMenuItem) -> NSMenuItem { i.target = self; return i }
 
     private func giveMenu() -> NSMenuItem {
         let item = NSMenuItem(title: "Give", action: nil, keyEquivalent: "")
@@ -296,8 +382,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         menu.addItem(withTitle: "To-do List…", action: #selector(openTodoList), keyEquivalent: "")
         menu.addItem(.separator())
+        menu.addItem(focusMenu())
+        menu.addItem(.separator())
         menu.addItem(feedMenu())
-        menu.addItem(withTitle: "Play", action: #selector(play), keyEquivalent: "")
+        menu.addItem(playMenu())
         menu.addItem(withTitle: "Head Pats ♥", action: #selector(headPats), keyEquivalent: "")
         if pet.isAsleep {
             menu.addItem(withTitle: "Wake Up", action: #selector(wake), keyEquivalent: "")
@@ -307,6 +395,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(giveMenu())
         menu.addItem(.separator())
         menu.addItem(withTitle: "Closet…", action: #selector(openCloset), keyEquivalent: "")
+        menu.addItem(withTitle: "Shop…  (\(life.s.coins) 🪙)", action: #selector(openShop), keyEquivalent: "")
         menu.addItem(withTitle: "Scrapbook…", action: #selector(openScrapbook), keyEquivalent: "")
         menu.addItem(.separator())
         if prefs.petVisible {

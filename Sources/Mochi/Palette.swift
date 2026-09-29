@@ -60,7 +60,9 @@ struct PaletteBase: Equatable {
 }
 
 enum PalettePreset: String, CaseIterable, Identifiable {
-    case espresso, latte, matcha, strawberry, mint, pumpkin, midnight, psp, arcade, pocket, custom
+    case espresso, latte, matcha, strawberry, mint, pumpkin, midnight, psp, arcade, pocket
+    case sunset, ocean, cottonCandy, golden
+    case custom
 
     var id: String { rawValue }
 
@@ -74,6 +76,10 @@ enum PalettePreset: String, CaseIterable, Identifiable {
         case .pumpkin: return "Pumpkin Spice"
         case .midnight: return "Midnight Lilac"
         case .psp: return "Piano Black"
+        case .sunset: return "Sunset"
+        case .ocean: return "Ocean"
+        case .cottonCandy: return "Cotton Candy"
+        case .golden: return "Golden ✨"
         case .arcade: return "Arcade 8-bit"
         case .pocket: return "Pocket Green"
         case .custom: return "Custom"
@@ -99,6 +105,15 @@ enum PalettePreset: String, CaseIterable, Identifiable {
         case .psp:
             return PaletteBase(body: "#DCE3EE", outline: "#10131C", cheek: "#8DB4FF", accent: "#2F7BEA", eye: "#10131C",
                                shade: "#AAB6C8", highlight: "#FFFFFF", mug: "#1E2230")
+        case .sunset:
+            return PaletteBase(body: "#FFB38A", outline: "#4A2340", cheek: "#FF6F91", accent: "#845EC2", eye: "#2C1B2E")
+        case .ocean:
+            return PaletteBase(body: "#9FD8E8", outline: "#16324F", cheek: "#F7A8B8", accent: "#2E86AB", eye: "#16324F")
+        case .cottonCandy:
+            return PaletteBase(body: "#FFD1E8", outline: "#5B3A6B", cheek: "#FF8FC7", accent: "#9AD8FF", eye: "#3D2A4A")
+        case .golden:
+            return PaletteBase(body: "#F7D154", outline: "#6B4A12", cheek: "#F29E4C", accent: "#FFF3B0", eye: "#3A2A08",
+                               shade: "#D9A92E", highlight: "#FFF6C8")
         case .arcade:
             return PaletteBase(body: "#FFCCAA", outline: "#1D2B53", cheek: "#FF77A8", accent: "#29ADFF", eye: "#1D2B53", mug: "#FFF1E8",
                                lock: ["#000000", "#1D2B53", "#7E2553", "#008751", "#AB5236", "#5F574F", "#C2C3C7", "#FFF1E8",
@@ -159,6 +174,8 @@ struct SpriteColors: Equatable {
         set(.purpleDark, RGBA(hex: "#4E3591"))
         set(.black, RGBA(hex: "#26222E"))
         set(.drop, RGBA(hex: "#6FA8DC"))
+        set(.brown, RGBA(hex: "#9A6A3F"))
+        set(.brownDark, RGBA(hex: "#6B4526"))
 
         if let lock = p.lock?.map(RGBA.init(hex:)), !lock.isEmpty {
             for i in t.indices where t[i].a > 0.99 {

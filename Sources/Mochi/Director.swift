@@ -1,6 +1,29 @@
 import AppKit
 import Combine
 
+/// Pomodoro-style focus timer. Lives in memory; stats are saved in PetLife.
+final class FocusTimer: ObservableObject {
+    enum Phase: Equatable { case idle, focus, rest }
+    @Published private(set) var phase: Phase = .idle
+    @Published private(set) var endsAt: Date?
+    private(set) var minutes = 25
+
+    var isRunning: Bool { phase != .idle }
+    var remaining: TimeInterval { max(0, endsAt?.timeIntervalSinceNow ?? 0) }
+    var remainingLabel: String {
+        let r = Int(remaining.rounded(.up))
+        return String(format: "%d:%02d", r / 60, r % 60)
+    }
+
+    func start(_ p: Phase, minutes m: Int) {
+        minutes = m
+        phase = p
+        endsAt = p == .idle ? nil : Date().addingTimeInterval(TimeInterval(m * 60))
+    }
+
+    func stop() { start(.idle, minutes: 0) }
+}
+
 /// The pet's rule-based brain: senses → mood & decisions → actions (talking, animation, events).
 /// No AI anywhere in here — just timers, dice, and memories.
 final class Director {
@@ -31,6 +54,11 @@ final class Director {
     private var spookyHourKey = ""
     private var exploringSince: TimeInterval?
     private var hovering = false
+    let focus = FocusTimer()
+    private var lastEditorReaction: TimeInterval = 0
+    private var editorErrors = 0
+
+    private var quietForFocus: Bool { focus.phase == .focus && prefs.focusQuiet }
 
     init(pet: PetController) {
         self.pet = pet
@@ -91,6 +119,7 @@ final class Director {
             life.saveSoon()
         }
 
+        focusCheck()
         exploreCheck(s, now: now)
         guard !pet.exploring else { return }
 
@@ -98,6 +127,7 @@ final class Director {
         overridesCheck(now: now)
         needsCheck(now: now, idle: s.idle)
 
+        if quietForFocus { return }
         if s.idle < 60 && now >= nextChatter && !bubble.isShowing {
             scheduleChatter(now)
             if prefs.chattiness != .quiet, let line = chatterLine() { say(line) }
@@ -140,7 +170,7 @@ final class Director {
             currentActivity = a
             activitySince = now
             applyTaskOutfit(a)
-            if let a, previous == nil, now - (lastActivityLine[a] ?? 0) > 25 * 60, prefs.chattiness != .quiet, !bubble.isShowing {
+            if let a, previous == nil, now - (lastActivityLine[a] ?? 0) > 25 * 60, prefs.chattiness != .quiet, !bubble.isShowing, !quietForFocus {
                 lastActivityLine[a] = now
                 say(Lines.activityStart(a, name: name))
             }
@@ -157,6 +187,10 @@ final class Director {
     }
 
     private func applyTaskOutfit(_ a: Activity?) {
+        if focus.phase == .focus {
+            pet.accessoryOverride = .headphones
+            return
+        }
         guard prefs.dressForTask, let a else {
             if pet.accessoryOverride != nil && rainbowUntil == 0 { pet.accessoryOverride = birthdayAccessory }
             if pet.heldOverride != nil { pet.heldOverride = nil }
@@ -177,7 +211,7 @@ final class Director {
     // MARK: - Needs
 
     private func needsCheck(now: TimeInterval, idle: TimeInterval) {
-        guard idle < 120, now - lastHungerLine > 20 * 60 else { return }
+        guard idle < 120, now - lastHungerLine > 20 * 60, !quietForFocus else { return }
         if life.s.hunger < 20 {
             lastHungerLine = now
             pet.perform(.sad)
@@ -365,6 +399,94 @@ final class Director {
         else { say("for me?! i'll treasure this \(item.label.lowercased()) ♡", duration: 4) }
     }
 
+    // MARK: - Focus timer
+
+    func startFocus(minutes: Int? = nil) {
+        let m = minutes ?? prefs.focusMinutes
+        focus.start(.focus, minutes: m)
+        pet.brain.wake()
+        pet.accessoryOverride = .headphones
+        pet.perform(.love)
+        say("🍅 \(m)-minute focus — i'll be quiet. you've got this!", duration: 4, force: true)
+    }
+
+    func stopFocus() {
+        let was = focus.phase
+        focus.stop()
+        applyTaskOutfit(currentActivity)
+        if was == .focus { say("focus stopped — that still counts as trying ♡", duration: 3, force: true) }
+    }
+
+    func skipBreak() {
+        guard focus.phase == .rest else { return }
+        focus.stop()
+        say("break skipped! back at it? 🍅", duration: 3, force: true)
+    }
+
+    private func focusCheck() {
+        guard focus.isRunning, focus.remaining <= 0 else { return }
+        switch focus.phase {
+        case .focus:
+            let m = focus.minutes
+            life.focusFinished(minutes: m)
+            focus.start(.rest, minutes: prefs.breakMinutes)
+            applyTaskOutfit(currentActivity)
+            pet.perform(.celebrate)
+            say("🍅 \(m) minutes of focus — amazing! (+3 🪙) take \(prefs.breakMinutes) min to stretch ☕", duration: 7, force: true)
+            if m >= 45 { life.remember("you focused for \(m) minutes straight", emoji: "🍅") }
+        case .rest:
+            focus.stop()
+            pet.perform(.wave)
+            say("break's over! ready for another round? 🍅 (right-click me → Focus)", duration: 6, force: true)
+        case .idle:
+            break
+        }
+    }
+
+    // MARK: - Shop
+
+    func buy(_ item: ShopItem) -> PetLife.BuyResult {
+        let r = life.buy(item)
+        switch r {
+        case .bought:
+            if let acc = item.accessory { prefs.accessory = acc; life.triedAccessory(acc) }
+            if let p = item.palette { prefs.palettePreset = p }
+            if let h = item.held { prefs.held = h }
+            pet.brain.wake()
+            pet.perform(.celebrate)
+            say(item.boughtLine, duration: 4, force: true)
+        case .broke:
+            say("we need \(item.price - life.s.coins) more 🪙 for that — finish some to-dos?", duration: 4, force: true)
+        case .alreadyOwned:
+            break
+        }
+        return r
+    }
+
+    // MARK: - Rock, paper, scissors
+
+    enum RPSOutcome { case youWin, petWins, tie }
+
+    func rpsRound(_ outcome: RPSOutcome) {
+        pet.brain.wake()
+        switch outcome {
+        case .youWin: pet.perform(.sad)
+        case .petWins: pet.perform(.celebrate)
+        case .tie: pet.perform(.surprised)
+        }
+        life.touch()
+    }
+
+    func rpsMatch(youWon: Bool) {
+        if youWon {
+            life.rpsMatchWon()
+            pet.perform(.love)
+        } else {
+            pet.perform(.dance)
+            life.gainXP(1)
+        }
+    }
+
     // MARK: - To-dos
 
     func addTodo(_ text: String) {
@@ -424,6 +546,8 @@ final class Director {
             buildResult(ok: ok, seconds: secs, kind: what == "test" ? "tests" : "build")
         case "success": buildResult(ok: true, seconds: 0, kind: "build")
         case "fail", "error": buildResult(ok: false, seconds: 0, kind: "build")
+        case "editor":
+            editorDiagnostics(errors: Int(q("errors") ?? "") ?? 0)
         case "commit":
             pet.perform(.dance)
             say(["committed! 📦✨", "another one in the history books", "git gud (you did)"].randomElement()!)
@@ -432,6 +556,22 @@ final class Director {
             AppDelegate.shared?.openHome()
         default:
             break
+        }
+    }
+
+    /// From the VS Code extension: error count changed (it only sends real transitions).
+    private func editorDiagnostics(errors: Int) {
+        let now = PetBrain.now
+        defer { editorErrors = errors }
+        guard now - lastEditorReaction > 8 else { return }
+        lastEditorReaction = now
+        pet.brain.wake()
+        if errors > 0 && editorErrors == 0 {
+            pet.perform(.sad)
+            say(errors == 1 ? "😰 uh oh, a red squiggle…" : "😰 uh oh, \(errors) errors…", duration: 3, force: !quietForFocus)
+        } else if errors == 0 && editorErrors > 0 {
+            pet.perform(.celebrate)
+            say(["✨ all clean!", "no more squiggles ✨", "fixed it!! 🎉"].randomElement()!, duration: 3, force: !quietForFocus)
         }
     }
 
@@ -470,7 +610,7 @@ final class Director {
     private enum Rarity { case common, uncommon, rare, legendary }
 
     private func rollEvent() {
-        guard prefs.randomEvents != .off, pet.isVisible, !pet.isAsleep, pet.brain.currentAct == nil, !actors.isBusy else { return }
+        guard prefs.randomEvents != .off, !quietForFocus, pet.isVisible, !pet.isAsleep, pet.brain.currentAct == nil, !actors.isBusy else { return }
         let mult = prefs.randomEvents == .often ? 2 : 1
         let r = Int.random(in: 1...1000)
         let rarity: Rarity?

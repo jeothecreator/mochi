@@ -3,18 +3,20 @@ import Combine
 import SwiftUI
 
 enum HomeTab: String, CaseIterable, Identifiable {
-    case todo, closet
+    case todo, closet, shop
     var id: String { rawValue }
     var label: String {
         switch self {
         case .todo: return "To-do"
         case .closet: return "Closet"
+        case .shop: return "Shop"
         }
     }
     var symbol: String {
         switch self {
         case .todo: return "checklist"
         case .closet: return "tshirt.fill"
+        case .shop: return "bag.fill"
         }
     }
 }
@@ -120,6 +122,7 @@ struct HomeView: View {
                 switch nav.tab {
                 case .todo: TodoTab(director: director)
                 case .closet: ScrollView { ClosetTab().padding(12) }
+                case .shop: ScrollView { ShopTab(director: director).padding(12) }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -442,10 +445,17 @@ struct ClosetTab: View {
                 }
             }
             SectionTitle(text: "Holding")
-            ThumbGrid(items: HeldItem.allCases, selection: $prefs.held, label: { $0.label }, accent: t.accent) { item in
-                var look = prefs.look
-                let _ = (look.held = item)
-                SpriteImage(look: look, colors: prefs.spriteColors, size: 48)
+            ThumbGrid(items: HeldItem.allCases, selection: Binding(get: { prefs.held }, set: { h in
+                if life.isUnlocked(h) { prefs.held = h }
+            }), label: { life.isUnlocked($0) ? $0.label : "Shop" }, locked: { !life.isUnlocked($0) }, accent: t.accent) { item in
+                if life.isUnlocked(item) {
+                    var look = prefs.look
+                    let _ = (look.held = item)
+                    SpriteImage(look: look, colors: prefs.spriteColors, size: 48)
+                } else {
+                    Image(systemName: "bag.fill").font(.system(size: 20)).frame(width: 48, height: 48)
+                        .help(ShopItem.item(for: item).map { "Buy it in the Shop · \($0.price) coins" } ?? "")
+                }
             }
             SectionTitle(text: "Eyes")
             Picker("Eyes", selection: $prefs.eyeStyle) { ForEach(EyeStyle.allCases) { Text($0.label).tag($0) } }
@@ -487,6 +497,87 @@ struct ModeCard: View {
         .help(mode.tagline)
         .accessibilityLabel("\(mode.label) mode")
         .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+
+// MARK: - Shop
+
+struct ShopTab: View {
+    let director: Director
+    @ObservedObject var prefs = Prefs.shared
+    @ObservedObject var life = PetLife.shared
+    private var t: ThemeColors { prefs.theme }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                IconImage(icon: .bag, scale: 3)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Coin shop").font(t.font(14, .bold)).foregroundStyle(t.ink)
+                    Text("You have \(life.s.coins) 🪙").font(t.font(11)).foregroundStyle(t.subInk)
+                }
+            }
+            Text("Earn coins by finishing to-dos (+1), focus sessions (+3), rock-paper-scissors wins (+2), random events and achievements.")
+                .font(t.font(10)).foregroundStyle(t.subInk).fixedSize(horizontal: false, vertical: true)
+            section("Outfits", .outfit)
+            section("Palettes", .palette)
+            section("Extras", .extra)
+        }
+    }
+
+    private func section(_ title: String, _ kind: ShopItem.Kind) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            SectionTitle(text: title)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 118), spacing: 8)], spacing: 8) {
+                ForEach(ShopItem.allCases.filter { $0.kind == kind }) { card($0) }
+            }
+        }
+    }
+
+    private func preview(_ item: ShopItem) -> (CreatureLook, SpriteColors) {
+        var look = prefs.look
+        if let a = item.accessory { look.accessory = a }
+        if let h = item.held { look.held = h }
+        let colors = item.palette.flatMap(\.base).map(SpriteColors.make) ?? prefs.spriteColors
+        return (look, colors)
+    }
+
+    private func wearing(_ item: ShopItem) -> Bool {
+        (item.accessory != nil && prefs.accessory == item.accessory) ||
+        (item.palette != nil && prefs.palettePreset == item.palette) ||
+        (item.held != nil && prefs.held == item.held)
+    }
+
+    private func card(_ item: ShopItem) -> some View {
+        let owned = life.owns(item)
+        let (look, colors) = preview(item)
+        return VStack(spacing: 5) {
+            SpriteImage(look: look, colors: colors, size: 56)
+            Text(item.accessory?.label ?? item.palette?.label ?? item.held?.label ?? "")
+                .font(t.font(11, .bold)).foregroundStyle(t.ink).lineLimit(1).minimumScaleFactor(0.8)
+            if owned {
+                Button(wearing(item) ? "Wearing ✓" : "Wear") { wear(item) }
+                    .buttonStyle(t.quietButton)
+                    .disabled(wearing(item))
+            } else {
+                Button("\(item.price) 🪙") { _ = director.buy(item) }
+                    .buttonStyle(t.button)
+                    .opacity(life.s.coins >= item.price ? 1 : 0.5)
+                    .help(life.s.coins >= item.price ? "Buy \(item.label)" : "You need \(item.price - life.s.coins) more coins")
+            }
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity)
+        .retroBox(fill: t.petBubble, border: wearing(item) ? t.accent : t.border.opacity(0.4), notch: t.rounded ? 0 : 3, line: wearing(item) ? 2.5 : 1.5)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(item.label), \(owned ? "owned" : "\(item.price) coins")")
+    }
+
+    private func wear(_ item: ShopItem) {
+        if let a = item.accessory { prefs.accessory = a; life.triedAccessory(a) }
+        if let p = item.palette { prefs.palettePreset = p }
+        if let h = item.held { prefs.held = h }
+        AppDelegate.shared?.pet.perform(.love)
     }
 }
 

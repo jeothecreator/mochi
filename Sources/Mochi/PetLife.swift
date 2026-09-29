@@ -93,6 +93,7 @@ enum Souvenir: String, CaseIterable, Identifiable, Codable {
 enum Achievement: String, CaseIterable, Identifiable, Codable {
     case hatched, firstMeal, bestFriends, pokeMaster, pokeLegend, bigMochi, nightOwl, explorer
     case lucky, bugSpotter, itCompiles, buildHero, noteTaker, doneAndDusted, fashionista, welcomeBack, fishFriend, birthday, secretWord
+    case firstFocus, deepFocus, shopper, rpsChamp
 
     var id: String { rawValue }
 
@@ -117,6 +118,10 @@ enum Achievement: String, CaseIterable, Identifiable, Codable {
         case .fishFriend: return "Fish friend"
         case .birthday: return "Birthday buddy"
         case .secretWord: return "Say my name"
+        case .firstFocus: return "In the zone"
+        case .deepFocus: return "Deep focus"
+        case .shopper: return "Treat yourself"
+        case .rpsChamp: return "Rock star"
         }
     }
 
@@ -141,6 +146,10 @@ enum Achievement: String, CaseIterable, Identifiable, Codable {
         case .fishFriend: return "Gave away a golden fish."
         case .birthday: return "Celebrated your birthday."
         case .secretWord: return "Typed the secret word."
+        case .firstFocus: return "Finished a focus session."
+        case .deepFocus: return "Finished 10 focus sessions."
+        case .shopper: return "Bought something in the shop."
+        case .rpsChamp: return "Won 10 rock-paper-scissors matches."
         }
     }
 
@@ -239,6 +248,75 @@ struct UserProfile: Codable, Equatable {
     var facts: [String] = []
 }
 
+/// Things you can buy with coins.
+enum ShopItem: String, CaseIterable, Identifiable {
+    case sunglasses, chefHat, cowboyHat, starClip, plant, sunset, ocean, cottonCandy, golden
+    var id: String { rawValue }
+
+    enum Kind { case outfit, palette, extra }
+
+    var kind: Kind {
+        switch self {
+        case .sunglasses, .chefHat, .cowboyHat, .starClip: return .outfit
+        case .sunset, .ocean, .cottonCandy, .golden: return .palette
+        case .plant: return .extra
+        }
+    }
+
+    var accessory: Accessory? {
+        switch self {
+        case .sunglasses: return .sunglasses
+        case .chefHat: return .chefHat
+        case .cowboyHat: return .cowboyHat
+        case .starClip: return .starClip
+        default: return nil
+        }
+    }
+
+    var palette: PalettePreset? {
+        switch self {
+        case .sunset: return .sunset
+        case .ocean: return .ocean
+        case .cottonCandy: return .cottonCandy
+        case .golden: return .golden
+        default: return nil
+        }
+    }
+
+    var held: HeldItem? { self == .plant ? .plant : nil }
+
+    var label: String {
+        accessory?.label ?? palette.map { "\($0.label) palette" } ?? held?.label ?? rawValue
+    }
+
+    var price: Int {
+        switch self {
+        case .starClip: return 10
+        case .plant, .sunset, .ocean: return 12
+        case .sunglasses, .cottonCandy: return 15
+        case .chefHat: return 20
+        case .cowboyHat: return 25
+        case .golden: return 60
+        }
+    }
+
+    var boughtLine: String {
+        switch self {
+        case .sunglasses: return "too cool for school 😎"
+        case .chefHat: return "bonjour, i am chef now 👨‍🍳"
+        case .cowboyHat: return "yeehaw 🤠"
+        case .starClip: return "sparkly! ⭐"
+        case .plant: return "i will name it leafy 🌱"
+        case .golden: return "✨ i am GOLDEN ✨"
+        default: return "new colors!! how do i look? 🎨"
+        }
+    }
+
+    static func item(for acc: Accessory) -> ShopItem? { allCases.first { $0.accessory == acc } }
+    static func item(for p: PalettePreset) -> ShopItem? { allCases.first { $0.palette == p } }
+    static func item(for h: HeldItem) -> ShopItem? { allCases.first { $0.held == h } }
+}
+
 // MARK: - Save file
 
 struct PetSave: Codable {
@@ -260,6 +338,10 @@ struct PetSave: Codable {
     var failStreak = 0
     var notesWritten = 0
     var todosDone = 0
+    var purchases: [String] = []
+    var focusSessions = 0
+    var focusMinutesTotal = 0
+    var rpsWins = 0
     var eventsSeen: [String: Int] = [:]
     var accessoriesTried: [String] = []
 
@@ -442,7 +524,48 @@ final class PetLife: ObservableObject {
         return acc
     }
 
-    func isUnlocked(_ acc: Accessory) -> Bool { !acc.isSecret || s.unlockedSecrets.contains(acc.rawValue) }
+    func isUnlocked(_ acc: Accessory) -> Bool {
+        if let item = ShopItem.item(for: acc) { return owns(item) }
+        return !acc.isSecret || s.unlockedSecrets.contains(acc.rawValue)
+    }
+    func isUnlocked(_ p: PalettePreset) -> Bool { ShopItem.item(for: p).map(owns) ?? true }
+    func isUnlocked(_ h: HeldItem) -> Bool { ShopItem.item(for: h).map(owns) ?? true }
+
+    // MARK: Shop
+
+    func owns(_ item: ShopItem) -> Bool { s.purchases.contains(item.rawValue) }
+
+    enum BuyResult { case bought, alreadyOwned, broke }
+
+    func buy(_ item: ShopItem) -> BuyResult {
+        if owns(item) { return .alreadyOwned }
+        guard s.coins >= item.price else { return .broke }
+        s.coins -= item.price
+        s.purchases.append(item.rawValue)
+        unlock(.shopper)
+        gainXP(5)
+        return .bought
+    }
+
+    // MARK: Focus & games
+
+    func focusFinished(minutes: Int) {
+        s.focusSessions += 1
+        s.focusMinutesTotal += minutes
+        s.coins += 3
+        s.energy = max(0, s.energy - 5)
+        unlock(.firstFocus)
+        if s.focusSessions == 10 { unlock(.deepFocus) }
+        gainXP(5)
+    }
+
+    func rpsMatchWon() {
+        s.rpsWins += 1
+        s.coins += 2
+        s.happiness = min(100, s.happiness + 4)
+        if s.rpsWins == 10 { unlock(.rpsChamp) }
+        gainXP(2)
+    }
 
     func triedAccessory(_ acc: Accessory) {
         guard acc != .none, !s.accessoriesTried.contains(acc.rawValue) else { return }

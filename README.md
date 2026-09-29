@@ -9,11 +9,19 @@ Native SwiftUI + AppKit. Fully offline — no AI, no accounts, no network.
 
 ## Download
 
-**[⬇ Download Mochi for Mac (DMG)](https://github.com/jeothecreator/mochi/releases/latest)** — free, universal (Apple Silicon + Intel), macOS 14 Sonoma or newer.
+**Homebrew** (easiest):
+
+```bash
+brew install --cask jeothecreator/mochi/mochi
+```
+
+**Or [⬇ download the DMG](https://github.com/jeothecreator/mochi/releases/latest)** — free, universal (Apple Silicon + Intel), macOS 14 Sonoma or newer.
+
+**VS Code extension:** grab `mochi-pet-*.vsix` from the [latest release](https://github.com/jeothecreator/mochi/releases/latest), then `code --install-extension mochi-pet-1.1.0.vsix` (or Extensions → ⋯ → Install from VSIX…).
 
 1. Open the DMG and drag **Mochi** into **Applications**.
 2. Open Mochi. macOS will say it can't verify the developer — Mochi is free and not notarized by Apple.
-3. Go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway** next to Mochi. You only do this once.
+3. Go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway** next to Mochi. You only do this once (Homebrew installs need this too).
    <br>(Or in Terminal: `xattr -dr com.apple.quarantine /Applications/Mochi.app`)
 
 Mochi lives in your **menu bar** (no Dock icon). Hatch your egg and say hi!
@@ -23,6 +31,10 @@ Mochi lives in your **menu bar** (no Dock icon). Hatch your egg and say hi!
 | Hatch your pet | Quick to-do (left-click) | PSP mode | Closet |
 |---|---|---|---|
 | <img src="docs/screenshots/onboarding-0.png" width="220"> | <img src="docs/screenshots/quick-cafe.png" width="200"> | <img src="docs/screenshots/home-psp-todo.png" width="180"> | <img src="docs/screenshots/home-matcha-closet.png" width="180"> |
+
+| Coin shop | Focus timer | Rock, paper, scissors |
+|---|---|---|
+| <img src="docs/screenshots/home-cafe-shop.png" width="220"> | <img src="docs/screenshots/quick-focus.png" width="220"> | <img src="docs/screenshots/rps-cafe.png" width="240"> |
 
 <p align="center"><img src="docs/screenshots/onboarding-5.png" width="420" alt="Pick one screen or every screen"></p>
 
@@ -43,15 +55,21 @@ Mochi lives in the **menu bar** (no Dock icon). Copy it to `/Applications` if yo
 | Do this | What happens |
 |---|---|
 | **Left-click** the pet | A little to-do box pops up beside it — type, press Return, tick things off. Esc or click the pet again to close. |
-| **Right-click** the pet | Actions: stats line, Add a To-do, To-do List, **Feed ▸**, Play, Head Pats, Nap / Wake, **Give ▸** treasures, Closet, Scrapbook, Hide, Settings |
+| **Right-click** the pet | Actions: stats line, Add a To-do, To-do List, **Focus ▸**, **Feed ▸**, **Play ▸** (zoomies, rock-paper-scissors), Head Pats, Nap / Wake, **Give ▸** treasures, Closet, Shop, Scrapbook, Hide, Settings |
 | **Drag** it | Moves it; hover shows your pinned to-do |
 | **⌃⌥⌘Space** | Summons the pet and opens the to-do box (changeable) |
 
 **To-dos** — add from the quick box or the full list (right-click → To-do List). Check items off (+1 🪙 and a little celebration), pin one to see it when hovering the pet, clear finished ones. The pet occasionally nudges you about what's left.
 
+**Focus timer (Pomodoro)** — right-click → Focus ▸ Start. Mochi pops on headphones and stays quiet (no chatter or random events), the countdown shows in the menu bar and the to-do box, and each finished session earns +3 🪙 and starts a break. Lengths are adjustable in Settings.
+
+**Coin shop** — spend coins on sunglasses, a chef hat, a cowboy hat, a star clip, a tiny plant, and Sunset / Ocean / Cotton Candy / Golden ✨ palettes. Coins come from to-dos (+1), focus sessions (+3), rock-paper-scissors wins (+2), events and achievements.
+
+**Rock, paper, scissors** — right-click → Play ▸. First to 2 wins; beat Mochi for +2 🪙.
+
 **Pet life** — happiness, fullness and energy drift down slowly (never punishingly; it can't die). Feed it (cookie, onigiri, strawberry are free; matcha, boba, fish and cake cost coins), play, give head pats, send it to nap. Coins come from hanging out, finishing to-dos, events and achievements; friendship levels up as you interact.
 
-**Home panel** — two tabs: *To-do* and *Closet* (modes, species, outfits, held items). The *Scrapbook* (what it knows about you, 19 achievements, memories) lives in Settings.
+**Home panel** — three tabs: *To-do*, *Closet* (modes, species, outfits, held items) and *Shop*. The *Scrapbook* (what it knows about you, 23 achievements, memories) lives in Settings.
 
 **Modes** — Mochi Café, **Matcha**, **PSP** (piano black, glowing waves, rounded type, pet plays a handheld), Strawberry Milk, Pocket (4-shade green), Midnight, Terminal. A mode sets the theme + palette + held item; tweak anything after.
 
@@ -64,7 +82,9 @@ Mochi lives in the **menu bar** (no Dock icon). Copy it to `/Applications` if yo
 - **Random events** rolled each active minute — common 1/10 (finds a cookie, sneezes, naps, investigates your cursor, dance break), uncommon 1/50 (coin, balloon float, ladybug crawls by), rare 1/250 (golden fish swims across, ghost, a visitor pet, indoor rain), legendary 1/1000 (mystery package).
 - **Secrets** — 100 pokes, 500 pokes, 10 cookies in a day, 3 AM, gone 30 min, gone a day, typing its name, giving it something golden… (see the Scrapbook for hints).
 
-**Reacts to your builds** — Settings → *Personality & Senses* has a zsh hook and git hook to copy. Anything that can open a URL works:
+**VS Code** — the [Mochi extension](vscode-extension) makes the pet worry when a save leaves errors, celebrate when they're all fixed, and cheer/faint when build or test tasks finish. No shell setup needed.
+
+**Reacts to your builds (any terminal)** — Settings → *Personality & Senses* has a zsh hook and git hook to copy. Anything that can open a URL works:
 
 ```bash
 open -g "mochi://build?status=0"   # ✨ celebrates   (status≠0 → 💥 falls over)
@@ -105,7 +125,8 @@ Test/snapshot runs write to temp folders, never your real pet.
 | `Senses.swift` | Cursor / idle / frontmost-app polling (2 Hz) |
 | `PetLife.swift` | Stats, food, treasures, achievements, notes, memories, profile (JSON) |
 | `PetWindow.swift`, `Overlays.swift` | Desktop pet window, speech bubble, critter layer, mystery package |
-| `QuickTodo.swift` | The left-click to-do box |
+| `Popovers.swift` | Pop-ups next to the pet: quick to-do + focus countdown, rock-paper-scissors |
+| `vscode-extension/` | VS Code extension (plain JS, no dependencies) |
 | `HomeView.swift`, `OnboardingView.swift`, `SettingsView.swift` | To-do / Closet panel, onboarding, settings (incl. Scrapbook) |
 
 ## Performance

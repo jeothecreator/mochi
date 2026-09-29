@@ -70,6 +70,10 @@ enum Exporters {
             (CreatureLook(species: .ghost, accessory: .bandana, held: .mug), Pose(effect: .balloon)),
             (CreatureLook(species: .mochi, accessory: .none, held: .none), Pose(expression: .happy, effect: .music(1))),
             (CreatureLook(species: .kitty, accessory: .bandana, held: .none), Pose(expression: .surprised, effect: .sweat)),
+            (CreatureLook(accessory: .sunglasses, held: .plant), Pose()),
+            (CreatureLook(species: .bear, accessory: .chefHat, held: .none), Pose(expression: .happy)),
+            (CreatureLook(species: .bunny, accessory: .cowboyHat, held: .mug), Pose()),
+            (CreatureLook(species: .kitty, accessory: .starClip, held: .boba), Pose()),
         ]
         let ctx = makeContext(items.count * cell, cell)
         ctx.setFillColor(RGBA(hex: "#6E7F86").nsColor.cgColor)
@@ -210,10 +214,18 @@ extension Exporters {
             prefs.apply(mode)
             let view = QuickTodoView(director: director, openList: {}, close: {})
             let probe = NSHostingView(rootView: view)
-            let size = NSSize(width: QuickTodoController.width, height: ceil(probe.fittingSize.height))
+            let size = NSSize(width: QuickTodoView.width, height: ceil(probe.fittingSize.height))
             print("quick box \(mode.rawValue): \(Int(size.width))×\(Int(size.height))")
             snapshot(view, size: size, to: out.appendingPathComponent("quick-\(mode.rawValue).png"))
+            let game = RPSView(director: director, close: {})
+            let gsize = NSSize(width: RPSView.width, height: ceil(NSHostingView(rootView: game).fittingSize.height))
+            snapshot(game, size: gsize, to: out.appendingPathComponent("rps-\(mode.rawValue).png"))
         }
+        director.startFocus(minutes: 25)
+        let focused = QuickTodoView(director: director, openList: {}, close: {})
+        snapshot(focused, size: NSSize(width: QuickTodoView.width, height: ceil(NSHostingView(rootView: focused).fittingSize.height)),
+                 to: out.appendingPathComponent("quick-focus.png"))
+        director.stopFocus()
         prefs.apply(savedMode)
 
         let snav = SettingsNav()
@@ -280,6 +292,24 @@ extension Exporters {
         let coinsBefore = life.s.coins
         check(life.toggleDone(life.s.notes[0].id) && life.s.coins == coinsBefore + 1 && life.openTodos.isEmpty, "checking off a to-do pays 1 coin")
         check(!life.toggleDone(life.s.notes[0].id) && life.openTodos.count == 1, "un-checking brings it back")
+        // Shop
+        life.s.coins = 14
+        check(life.buy(.sunglasses) == .broke && !life.isUnlocked(.sunglasses), "shop: can't buy sunglasses with 14 coins")
+        check(life.buy(.starClip) == .bought && life.isUnlocked(.starClip) && life.s.coins == 4 + Achievement.shopper.coins,
+              "shop: star clip bought, coins deducted (+ achievement bonus)")
+        check(life.buy(.starClip) == .alreadyOwned, "shop: can't buy twice")
+        check(!life.isUnlocked(.golden) && !life.isUnlocked(.plant), "shop palettes & extras start locked")
+        // Focus + games
+        let before = life.s.coins
+        life.focusFinished(minutes: 25)
+        check(life.s.focusSessions == 1 && life.s.coins == before + 3 + Achievement.firstFocus.coins, "focus session pays 3 coins")
+        let timer = FocusTimer()
+        timer.start(.focus, minutes: 25)
+        check(timer.isRunning && timer.remaining > 24 * 60 && timer.remainingLabel.hasPrefix("25:") || timer.remainingLabel.hasPrefix("24:"), "focus timer counts down (\(timer.remainingLabel))")
+        life.rpsMatchWon()
+        check(life.s.rpsWins == 1, "rock-paper-scissors win counted")
+        director.handle(url: URL(string: "mochi://editor?errors=3")!)
+        check(pet.brain.currentAct == .sad, "VS Code errors → pet looks worried")
         let legacy = #"{"hunger":50,"happiness":60,"energy":70,"coins":3,"notes":[{"id":"\#(UUID().uuidString)","text":"old note","color":1,"created":0,"pinned":true}]}"#
         let old = PetLife.tolerantDecode(Data(legacy.utf8))
         check(old?.coins == 3 && old?.notes.first?.text == "old note" && old?.notes.first?.isDone == false && old?.todosDone == 0,
