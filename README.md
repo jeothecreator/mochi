@@ -12,7 +12,9 @@ Native SwiftUI + AppKit. Fully offline — no AI, no accounts, no network.
 **Homebrew** (easiest):
 
 ```bash
-brew install --cask jeothecreator/mochi/mochi
+brew trust --cask jeothecreator/mochi/mochi   # newer Homebrew asks you to trust third-party taps (skip if "unknown command")
+brew tap jeothecreator/mochi
+brew install --cask mochi
 ```
 
 **Or [⬇ download the DMG](https://github.com/jeothecreator/mochi/releases/latest)** — free, universal (Apple Silicon + Intel), macOS 14 Sonoma or newer.

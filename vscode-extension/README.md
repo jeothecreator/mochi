@@ -6,7 +6,7 @@ Makes your [Mochi](https://github.com/jeothecreator/mochi) desktop pet react to 
 - ✨ **All errors fixed** → Mochi celebrates
 - 🎉 **Build/test task passes** → "WE DID IT" · 💥 **fails** → Mochi falls over
 
-Requires the Mochi app for macOS (`brew install --cask jeothecreator/mochi/mochi` or the DMG from the releases page).
+Requires the Mochi app for macOS — install it with Homebrew (`brew trust --cask jeothecreator/mochi/mochi && brew tap jeothecreator/mochi && brew install --cask mochi`) or the DMG from the [releases page](https://github.com/jeothecreator/mochi/releases/latest).
 
 ## Settings
 
