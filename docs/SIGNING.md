@@ -1,5 +1,7 @@
 # Making every Mac trust Mochi (signing + notarization)
 
+> ✅ Set up since 1.1.1: releases are signed with *Developer ID Application (49URM7MKXP)* and notarized. The steps below are for anyone rebuilding Mochi with their own account.
+
 macOS only opens downloaded apps without warnings when they are **signed with a Developer ID certificate**
 and **notarized by Apple**. The build scripts already do both automatically — they just need two things
 that only the developer can set up, once.

@@ -17,14 +17,11 @@ brew tap jeothecreator/mochi
 brew install --cask mochi
 ```
 
-**Or [⬇ download the DMG](https://github.com/jeothecreator/mochi/releases/latest)** — free, universal (Apple Silicon + Intel), macOS 14 Sonoma or newer.
+**Or [⬇ download the DMG](https://github.com/jeothecreator/mochi/releases/latest)** — free, universal (Apple Silicon + Intel), macOS 14 Sonoma or newer, notarized by Apple.
 
 **VS Code extension:** grab `mochi-pet-*.vsix` from the [latest release](https://github.com/jeothecreator/mochi/releases/latest), then `code --install-extension mochi-pet-1.1.0.vsix` (or Extensions → ⋯ → Install from VSIX…).
 
-1. Open the DMG and drag **Mochi** into **Applications**.
-2. Open Mochi. macOS will say it can't verify the developer — Mochi is free and not notarized by Apple.
-3. Go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway** next to Mochi. You only do this once (Homebrew installs need this too).
-   <br>(Or in Terminal: `xattr -dr com.apple.quarantine /Applications/Mochi.app`)
+Open the DMG, drag **Mochi** into **Applications**, and open it. Mochi is signed with a Developer ID and notarized by Apple, so it opens like any other app — no security workarounds needed.
 
 Mochi lives in your **menu bar** (no Dock icon). Hatch your egg and say hi!
 
