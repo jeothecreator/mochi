@@ -3,11 +3,12 @@ import Combine
 import SwiftUI
 
 enum HomeTab: String, CaseIterable, Identifiable {
-    case todo, closet, shop
+    case todo, wants, closet, shop
     var id: String { rawValue }
     var label: String {
         switch self {
         case .todo: return "To-do"
+        case .wants: return "Wants"
         case .closet: return "Closet"
         case .shop: return "Shop"
         }
@@ -15,6 +16,7 @@ enum HomeTab: String, CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .todo: return "checklist"
+        case .wants: return "cart.fill"
         case .closet: return "tshirt.fill"
         case .shop: return "bag.fill"
         }
@@ -121,6 +123,7 @@ struct HomeView: View {
             Group {
                 switch nav.tab {
                 case .todo: TodoTab(director: director)
+                case .wants: WantsTab(director: director)
                 case .closet: ScrollView { ClosetTab().padding(12) }
                 case .shop: ScrollView { ShopTab(director: director).padding(12) }
                 }

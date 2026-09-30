@@ -482,6 +482,7 @@ struct AboutPage: View {
         }
         Card(title: "STORED LOCALLY") {
             row("slider.horizontal.3", "Preferences", "Your creature's look, size, position, and settings (UserDefaults).")
+            row("cart", "Wants list", "Links and wishes you drop on \(prefs.petName) are saved as-is on this Mac. They're never fetched or shared — they only open in your browser when you click Open.")
             row("pawprint", "Pet life", "Stats, notes, memories, achievements and what you told it — \(PetLife.fileURL.path.replacingOccurrences(of: NSHomeDirectory(), with: "~")).")
         }
         Card(title: "NO TRACKING") {

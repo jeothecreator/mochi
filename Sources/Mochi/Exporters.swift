@@ -168,6 +168,14 @@ extension Exporters {
             life.addNote("finish the slides for Thursday")
             life.togglePin(life.s.notes[0].id)
         }
+        if life.s.wants.isEmpty {
+            _ = life.addWant(title: nil, url: URL(string: "https://www.uniqlo.com/us/en/products/E457264-000/cozy-fleece-zip-jacket"))
+            _ = life.addWant(title: "Matcha whisk set (bamboo chasen)", url: URL(string: "https://www.ippodo-tea.co.jp/en/products/chasen"))
+            _ = life.addWant(title: "Sony WH-1000XM5 Wireless Headphones", url: URL(string: "https://www.amazon.com/Sony-WH-1000XM5-Headphones/dp/B09XS7JWHH"))
+            _ = life.addWant(title: "a tiny cactus", url: nil)
+            life.setWantNote(life.s.wants[1].id, "$348 · black · wait for a sale?")
+            life.toggleGot(life.s.wants[0].id)
+        }
         life.s.profile.name = life.s.profile.name.isEmpty ? "Sam" : life.s.profile.name
         life.s.profile.favoriteGames = "Stardew Valley"
         life.s.profile.activities = [.coding, .design]
@@ -310,6 +318,32 @@ extension Exporters {
         check(life.s.rpsWins == 1, "rock-paper-scissors win counted")
         director.handle(url: URL(string: "mochi://editor?errors=3")!)
         check(pet.brain.currentAct == .sad, "VS Code errors → pet looks worried")
+        // Wants list: drag & drop parsing (private pasteboards simulate browser drags)
+        func board() -> NSPasteboard { let pb = NSPasteboard(name: .init("mochi-test-\(UUID().uuidString)")); pb.clearContents(); return pb }
+        let chrome = board()
+        chrome.writeObjects([URL(string: "https://www.amazon.com/Sony-WH-1000XM5-Headphones/dp/B09XS7JWHH")! as NSURL])
+        chrome.setString("Sony WH-1000XM5 Wireless Headphones", forType: DropParser.urlName)
+        check(DropParser.items(from: chrome) == [DropParser.Item(title: "Sony WH-1000XM5 Wireless Headphones", url: URL(string: "https://www.amazon.com/Sony-WH-1000XM5-Headphones/dp/B09XS7JWHH"))],
+              "drop: link with browser title (Chrome-style)")
+        let safari = board()
+        safari.setPropertyList([["https://www.etsy.com/listing/1/cozy-knit-beanie"], ["Cozy knit beanie – Etsy"]], forType: DropParser.webURLsWithTitles)
+        check(DropParser.items(from: safari).first?.title == "Cozy knit beanie – Etsy", "drop: Safari tab (URL + title list)")
+        let text = board()
+        text.setString("oat milk\nnew sketchbook", forType: .string)
+        check(DropParser.items(from: text).map(\.title) == ["oat milk", "new sketchbook"], "drop: plain text lines become wishes")
+        let file = board()
+        file.writeObjects([URL(fileURLWithPath: "/tmp/secret.txt") as NSURL])
+        check(DropParser.items(from: file).isEmpty, "drop: files are refused (only web links and text)")
+        check(PetLife.guessTitle(for: URL(string: "https://www.amazon.com/Sony-WH-1000XM5-Headphones/dp/B09XS7JWHH")!) == "Sony WH 1000XM5 Headphones",
+              "offline title guess from URL")
+        let wantsBefore = life.s.wants.count
+        check(director.handleDrop(chrome) && life.s.wants.count == wantsBefore + 1 && life.s.wants[0].site == "amazon.com", "dropping a link saves it to wants")
+        _ = director.handleDrop(chrome)
+        check(life.s.wants.count == wantsBefore + 1, "dropping the same link twice doesn't duplicate")
+        director.addWant(text: "a tiny cactus")
+        check(life.s.wants[0].title == "a tiny cactus" && life.s.wants[0].url == nil, "typed wish added")
+        life.toggleGot(life.s.wants[0].id)
+        check(life.openWants.count == 1 && life.gotWants.count == 1, "mark wish as got")
         let legacy = #"{"hunger":50,"happiness":60,"energy":70,"coins":3,"notes":[{"id":"\#(UUID().uuidString)","text":"old note","color":1,"created":0,"pinned":true}]}"#
         let old = PetLife.tolerantDecode(Data(legacy.utf8))
         check(old?.coins == 3 && old?.notes.first?.text == "old note" && old?.notes.first?.isDone == false && old?.todosDone == 0,

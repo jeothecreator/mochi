@@ -229,6 +229,10 @@ final class Director {
         if roll < 5, let l = Lines.profileLine(life.s.profile) { return l }
         if roll < 6, let n = life.pinnedNote { return "psst — don't forget: \(n.text)" }
         if roll < 7, life.openTodos.count >= 2 { return "\(life.openTodos.count) things on your list — knock one out? ✅" }
+        if roll == 7, let w = life.openWants.randomElement() {
+            let name = w.title.count > 36 ? String(w.title.prefix(34)) + "…" : w.title
+            return "still thinking about \(name)? 🛍️"
+        }
         if roll < 7, let a = currentActivity { return Lines.activityIdle(a) }
         return Lines.idle(name: name, hour: Calendar.current.component(.hour, from: Date()))
     }
@@ -484,6 +488,55 @@ final class Director {
         } else {
             pet.perform(.dance)
             life.gainXP(1)
+        }
+    }
+
+    // MARK: - Wants list (drag links onto the pet)
+
+    private var lastDropHoverLine: TimeInterval = 0
+
+    func dropHover(_ inside: Bool) {
+        guard inside else { return }
+        pet.brain.wake()
+        if pet.brain.currentAct == nil { pet.perform(.surprised) }
+        if PetBrain.now - lastDropHoverLine > 6 {
+            lastDropHoverLine = PetBrain.now
+            say("ooh! drop it on me 🛍️", duration: 2, force: true)
+        }
+    }
+
+    func handleDrop(_ pb: NSPasteboard) -> Bool {
+        let items = DropParser.items(from: pb)
+        guard !items.isEmpty else {
+            say("hmm, i can only hold links and text", duration: 3, force: true)
+            return false
+        }
+        saveWants(items)
+        return true
+    }
+
+    /// From the Wants tab's text box: a link or a plain wish.
+    func addWant(text: String) {
+        saveWants([DropParser.Item(title: DropParser.webURL(text) == nil ? text : nil, url: DropParser.webURL(text))])
+    }
+
+    func saveWants(_ items: [DropParser.Item]) {
+        var added: [WantItem] = []
+        var duplicates = 0
+        for item in items {
+            switch life.addWant(title: item.title, url: item.url) {
+            case .added(let w): added.append(w)
+            case .duplicate: duplicates += 1
+            }
+        }
+        pet.brain.wake()
+        if let first = added.first {
+            pet.perform(.celebrate)
+            let name = first.title.count > 40 ? String(first.title.prefix(38)) + "…" : first.title
+            say(added.count == 1 ? "saved “\(name)” to your wants 🛍️" : "saved \(added.count) things to your wants 🛍️", duration: 4, force: true)
+        } else if duplicates > 0 {
+            pet.perform(.love)
+            say("that's already on your wants list ♡", duration: 3, force: true)
         }
     }
 

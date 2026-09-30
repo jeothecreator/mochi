@@ -335,8 +335,9 @@ struct OnboardingView: View {
                 livePet(130, expression: .happy)
                 VStack(alignment: .leading, spacing: 9) {
                     tip("hand.tap", "Click me to jot a to-do — Return adds it.")
-                    tip("contextualmenu.and.cursorarrow", "Right-click me to feed, play, give treasures or open the closet.")
+                    tip("contextualmenu.and.cursorarrow", "Right-click me for snacks, games, the focus timer, the shop and more.")
                     tip("pin", "Pin a to-do and I'll show it when you hover over me. Drag me anywhere.")
+                    tip("cart", "Drag a link or browser tab onto me to save it to your Wants list.")
                     tip("keyboard", "\(prefs.hotKey.display) summons me to add a to-do from anywhere.")
                     tip("sparkles", "Keep me around — random events and secrets happen…")
                     tip("terminal", "Coder? Settings → Personality & Senses teaches me to cheer your builds.")

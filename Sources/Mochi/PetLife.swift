@@ -93,7 +93,7 @@ enum Souvenir: String, CaseIterable, Identifiable, Codable {
 enum Achievement: String, CaseIterable, Identifiable, Codable {
     case hatched, firstMeal, bestFriends, pokeMaster, pokeLegend, bigMochi, nightOwl, explorer
     case lucky, bugSpotter, itCompiles, buildHero, noteTaker, doneAndDusted, fashionista, welcomeBack, fishFriend, birthday, secretWord
-    case firstFocus, deepFocus, shopper, rpsChamp
+    case firstFocus, deepFocus, shopper, rpsChamp, windowShopper
 
     var id: String { rawValue }
 
@@ -122,6 +122,7 @@ enum Achievement: String, CaseIterable, Identifiable, Codable {
         case .deepFocus: return "Deep focus"
         case .shopper: return "Treat yourself"
         case .rpsChamp: return "Rock star"
+        case .windowShopper: return "Window shopper"
         }
     }
 
@@ -150,6 +151,7 @@ enum Achievement: String, CaseIterable, Identifiable, Codable {
         case .deepFocus: return "Finished 10 focus sessions."
         case .shopper: return "Bought something in the shop."
         case .rpsChamp: return "Won 10 rock-paper-scissors matches."
+        case .windowShopper: return "Saved 5 things to your wants list."
         }
     }
 
@@ -227,6 +229,23 @@ struct PetNote: Identifiable, Codable, Equatable {
     var pinned = false
     var doneAt: Date? = nil
     var isDone: Bool { doneAt != nil }
+}
+
+/// Something you want: saved by dragging a link onto the pet, or typed in.
+struct WantItem: Identifiable, Codable, Equatable {
+    var id = UUID()
+    var title: String
+    var url: String?
+    var note = ""
+    var added = Date()
+    var gotAt: Date? = nil
+
+    var isGot: Bool { gotAt != nil }
+    var link: URL? { url.flatMap(URL.init(string:)) }
+    var site: String? {
+        guard let host = link?.host?.lowercased() else { return nil }
+        return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
+    }
 }
 
 struct MemoryEntry: Identifiable, Codable, Equatable {
@@ -342,6 +361,8 @@ struct PetSave: Codable {
     var focusSessions = 0
     var focusMinutesTotal = 0
     var rpsWins = 0
+    var wants: [WantItem] = []
+    var wantsSaved = 0
     var eventsSeen: [String: Int] = [:]
     var accessoriesTried: [String] = []
 
@@ -545,6 +566,65 @@ final class PetLife: ObservableObject {
         unlock(.shopper)
         gainXP(5)
         return .bought
+    }
+
+    // MARK: Wants list
+
+    var openWants: [WantItem] { s.wants.filter { !$0.isGot } }
+    var gotWants: [WantItem] { s.wants.filter { $0.isGot } }
+
+    enum WantAddResult { case added(WantItem), duplicate(WantItem) }
+
+    func addWant(title: String?, url: URL?) -> WantAddResult {
+        let urlString = url?.absoluteString
+        if let urlString, let existing = s.wants.first(where: { $0.url == urlString && !$0.isGot }) {
+            return .duplicate(existing)
+        }
+        let clean = (title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = clean.isEmpty ? (url.map(Self.guessTitle(for:)) ?? "Something nice") : String(clean.prefix(200))
+        let item = WantItem(title: name, url: urlString)
+        s.wants.insert(item, at: 0)
+        s.wantsSaved += 1
+        if s.wantsSaved == 5 { unlock(.windowShopper) }
+        touch()
+        gainXP(1)
+        return .added(item)
+    }
+
+    /// Offline title guess from a URL, e.g. ".../Sony-WH-1000XM5-Headphones/dp/B09…" → "Sony WH 1000XM5 Headphones".
+    static func guessTitle(for url: URL) -> String {
+        let host = (url.host ?? "link").replacingOccurrences(of: "www.", with: "")
+        let words = url.pathComponents
+            .map { $0.removingPercentEncoding ?? $0 }
+            .filter { $0.contains("-") || $0.contains("_") }
+            .map { $0.replacingOccurrences(of: "-", with: " ").replacingOccurrences(of: "_", with: " ") }
+            .filter { $0.split(separator: " ").count >= 2 && $0.rangeOfCharacter(from: .letters) != nil }
+            .max(by: { $0.count < $1.count })
+        guard let words else { return host }
+        let trimmed = words.split(separator: " ").prefix(10).joined(separator: " ")
+        return trimmed.prefix(1).uppercased() + trimmed.dropFirst()
+    }
+
+    func toggleGot(_ id: UUID) {
+        guard let i = s.wants.firstIndex(where: { $0.id == id }) else { return }
+        s.wants[i].gotAt = s.wants[i].isGot ? nil : Date()
+        if s.wants[i].isGot { gainXP(1) } else { saveSoon() }
+    }
+
+    func setWantNote(_ id: UUID, _ note: String) {
+        guard let i = s.wants.firstIndex(where: { $0.id == id }) else { return }
+        s.wants[i].note = note
+        saveSoon()
+    }
+
+    func deleteWant(_ id: UUID) {
+        s.wants.removeAll { $0.id == id }
+        saveSoon()
+    }
+
+    func clearGotWants() {
+        s.wants.removeAll { $0.isGot }
+        saveSoon()
     }
 
     // MARK: Focus & games

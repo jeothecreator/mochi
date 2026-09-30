@@ -43,6 +43,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self.quick.toggle()
         }
         pet.onMenu = { [weak self] e in self?.showPetMenu(e) }
+        pet.onDropHover = { [weak self] inside in self?.director.dropHover(inside) }
+        pet.onDrop = { [weak self] pb in self?.director.handleDrop(pb) ?? false }
         pet.onMoved = { [weak self] in
             self?.home.followPet()
             self?.quick.follow()
@@ -127,6 +129,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc func togglePet() { prefs.petVisible ? hidePet() : showPet() }
 
     @objc func openTodoList() { openHome(tab: .todo) }
+    @objc func openWants() { openHome(tab: .wants) }
     @objc func openCloset() { openHome(tab: .closet) }
     @objc func openScrapbook() { openSettings(.scrapbook) }
     @objc func quickAdd() {
@@ -381,6 +384,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             add.title += "   \(prefs.hotKey.display)"
         }
         menu.addItem(withTitle: "To-do List…", action: #selector(openTodoList), keyEquivalent: "")
+        menu.addItem(withTitle: "Wants List…  (\(life.openWants.count))", action: #selector(openWants), keyEquivalent: "")
         menu.addItem(.separator())
         menu.addItem(focusMenu())
         menu.addItem(.separator())

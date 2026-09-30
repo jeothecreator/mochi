@@ -16,6 +16,36 @@ final class PetView: NSView {
     var onDragEnded: (() -> Void)?
     var onRightClick: ((NSEvent) -> Void)?
     var onHover: ((Bool) -> Void)?
+    /// Links/text dragged onto the pet (wants list).
+    var onDropHover: ((Bool) -> Void)?
+    var onDrop: ((NSPasteboard) -> Bool)?
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        registerForDraggedTypes(DropParser.acceptedTypes)
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        registerForDraggedTypes(DropParser.acceptedTypes)
+    }
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        guard onDrop != nil, !DropParser.items(from: sender.draggingPasteboard).isEmpty else { return [] }
+        onDropHover?(true)
+        return .copy
+    }
+
+    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
+        onDrop != nil && !DropParser.items(from: sender.draggingPasteboard).isEmpty ? .copy : []
+    }
+
+    override func draggingExited(_ sender: NSDraggingInfo?) { onDropHover?(false) }
+
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        onDropHover?(false)
+        return onDrop?(sender.draggingPasteboard) ?? false
+    }
 
     private var mouseStart: NSPoint = .zero
     private var originStart: NSPoint = .zero
@@ -121,6 +151,8 @@ final class PetController {
     var onMenu: ((NSEvent) -> Void)?
     var onMoved: (() -> Void)?
     var onHover: ((Bool) -> Void)?
+    var onDropHover: ((Bool) -> Void)?
+    var onDrop: ((NSPasteboard) -> Bool)?
 
     /// Extra pets on other displays (Settings → "A pet on every display"). They mirror the main pet's
     /// animation; hovering or clicking one quietly swaps it with the main pet, so popups follow you.
@@ -153,6 +185,8 @@ final class PetController {
         view.onClick = { [weak self] in self?.onClick?() }
         view.onRightClick = { [weak self] e in self?.onMenu?(e) }
         view.onHover = { [weak self] inside in self?.onHover?(inside) }
+        view.onDropHover = { [weak self] inside in self?.onDropHover?(inside) }
+        view.onDrop = { [weak self] pb in self?.onDrop?(pb) ?? false }
         view.onDragBegan = { [weak self] in self?.brain.dragging = true }
         view.onDragEnded = { [weak self] in
             guard let self else { return }
@@ -423,6 +457,12 @@ final class PetController {
             self.promote(p)
             self.onMenu?(e)
         }
+        v.onDropHover = { [weak self, weak p] inside in
+            guard let self, let p else { return }
+            if inside { self.promote(p) }
+            self.onDropHover?(inside)
+        }
+        v.onDrop = { [weak self] pb in self?.onDrop?(pb) ?? false }
         v.onDragEnded = { [weak self, weak p] in
             guard let self, let p, let screen = p.screen else { return }
             self.clamp(p, to: screen)

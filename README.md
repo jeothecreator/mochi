@@ -31,9 +31,9 @@ Mochi lives in your **menu bar** (no Dock icon). Hatch your egg and say hi!
 |---|---|---|---|
 | <img src="docs/screenshots/onboarding-0.png" width="220"> | <img src="docs/screenshots/quick-cafe.png" width="200"> | <img src="docs/screenshots/home-psp-todo.png" width="180"> | <img src="docs/screenshots/home-matcha-closet.png" width="180"> |
 
-| Coin shop | Focus timer | Rock, paper, scissors |
-|---|---|---|
-| <img src="docs/screenshots/home-cafe-shop.png" width="220"> | <img src="docs/screenshots/quick-focus.png" width="220"> | <img src="docs/screenshots/rps-cafe.png" width="240"> |
+| Wants list | Coin shop | Focus timer | Rock, paper, scissors |
+|---|---|---|---|
+| <img src="docs/screenshots/home-cafe-wants.png" width="200"> | <img src="docs/screenshots/home-cafe-shop.png" width="200"> | <img src="docs/screenshots/quick-focus.png" width="200"> | <img src="docs/screenshots/rps-cafe.png" width="220"> |
 
 <p align="center"><img src="docs/screenshots/onboarding-5.png" width="420" alt="Pick one screen or every screen"></p>
 
@@ -56,12 +56,15 @@ Mochi lives in the **menu bar** (no Dock icon). Copy it to `/Applications` if yo
 | Do this | What happens |
 |---|---|
 | **Left-click** the pet | A little to-do box pops up beside it — type, press Return, tick things off. Esc or click the pet again to close. |
-| **Right-click** the pet | Actions: stats line, Add a To-do, To-do List, **Focus ▸**, **Feed ▸**, **Play ▸** (zoomies, rock-paper-scissors), Head Pats, Nap / Wake, **Give ▸** treasures, Closet, Shop, Scrapbook, Hide, Settings |
+| **Right-click** the pet | Actions: stats line, Add a To-do, To-do List, Wants List, **Focus ▸**, **Feed ▸**, **Play ▸** (zoomies, rock-paper-scissors), Head Pats, Nap / Wake, **Give ▸** treasures, Closet, Shop, Scrapbook, Hide, Settings |
 | **Drag** it | Moves it; hover shows your pinned to-do |
+| **Drop a link** on it | Saves it to your Wants list 🛍️ |
 | Where it lives | **On your desktop** by default — behind your app windows, like a desktop widget. Turn on *Float above other windows* (Settings → Desktop & Shortcut, or during onboarding) to keep it in view over your apps. |
 | **⌃⌥⌘Space** | Summons the pet and opens the to-do box (changeable) |
 
 **To-dos** — add from the quick box or the full list (right-click → To-do List). Check items off (+1 🪙 and a little celebration), pin one to see it when hovering the pet, clear finished ones. The pet occasionally nudges you about what's left.
+
+**Wants list** — drag a link onto the pet (a link on a page, the address-bar icon, or a Safari tab; in Chrome, tabs themselves can't be dragged out, so drag the address-bar icon) and it's saved with its title to the *Wants* tab. Add notes like price or size, open it again later, and tick it off when you get it. You can also type or paste wishes there. Links are never fetched — titles come from the browser or the URL.
 
 **Focus timer (Pomodoro)** — right-click → Focus ▸ Start. Mochi pops on headphones and stays quiet (no chatter or random events), the countdown shows in the menu bar and the to-do box, and each finished session earns +3 🪙 and starts a break. Lengths are adjustable in Settings.
 
@@ -71,7 +74,7 @@ Mochi lives in the **menu bar** (no Dock icon). Copy it to `/Applications` if yo
 
 **Pet life** — happiness, fullness and energy drift down slowly (never punishingly; it can't die). Feed it (cookie, onigiri, strawberry are free; matcha, boba, fish and cake cost coins), play, give head pats, send it to nap. Coins come from hanging out, finishing to-dos, events and achievements; friendship levels up as you interact.
 
-**Home panel** — three tabs: *To-do*, *Closet* (modes, species, outfits, held items) and *Shop*. The *Scrapbook* (what it knows about you, 23 achievements, memories) lives in Settings.
+**Home panel** — four tabs: *To-do*, *Wants*, *Closet* (modes, species, outfits, held items) and *Shop*. The *Scrapbook* (what it knows about you, 24 achievements, memories) lives in Settings.
 
 **Modes** — Mochi Café, **Matcha**, **PSP** (piano black, glowing waves, rounded type, pet plays a handheld), Strawberry Milk, Pocket (4-shade green), Midnight, Terminal. A mode sets the theme + palette + held item; tweak anything after.
 
