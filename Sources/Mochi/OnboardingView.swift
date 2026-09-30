@@ -264,16 +264,26 @@ struct OnboardingView: View {
             title("where should I hang out?", "Change this anytime in Settings → Desktop & Shortcut.")
             HStack(spacing: 14) {
                 placeCard(everyDisplay: false, monitors: 1, title: "Just one screen",
-                          detail: "I'll stay right where you put me.")
+                          detail: "I'll stay right where you put me on your desktop.")
                 placeCard(everyDisplay: true, monitors: 2, title: "Every screen",
                           detail: displays > 1
                             ? "A copy of me on each of your \(displays) displays — whichever one you touch is the real me."
                             : "One of me on each display. (You have 1 right now — this kicks in when you plug in another.)")
             }
+            Toggle(isOn: $prefs.alwaysOnTop) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Float above my apps").font(t.font(13, .bold))
+                    Text("Off: I live on your desktop, behind your windows. On: I stay in view over everything.").font(t.font(11)).foregroundStyle(t.subInk)
+                }
+            }
+            .toggleStyle(.checkbox)
+            .padding(12)
+            .frame(width: 560, alignment: .leading)
+            .retroBox(fill: t.panel, border: t.border.opacity(0.5), notch: 3, line: 2)
             Toggle(isOn: $prefs.allSpaces) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Follow me to every desktop too").font(t.font(13, .bold))
-                    Text("Stay visible when you swipe between Spaces and full-screen apps.").font(t.font(11)).foregroundStyle(t.subInk)
+                    Text(prefs.alwaysOnTop ? "Stay visible when you swipe between Spaces and full-screen apps." : "Show up on every Space (virtual desktop) you swipe to.").font(t.font(11)).foregroundStyle(t.subInk)
                 }
             }
             .toggleStyle(.checkbox)

@@ -142,7 +142,7 @@ final class Prefs: ObservableObject {
         exploring = bool("exploring", true)
 
         petVisible = bool("petVisible", true)
-        alwaysOnTop = bool("alwaysOnTop", true)
+        alwaysOnTop = bool("alwaysOnTop", false)
         allSpaces = bool("allSpaces", true)
         everyDisplay = bool("everyDisplay", false)
         focusMinutes = min(90, max(5, int("focusMinutes", 25)))
@@ -170,6 +170,15 @@ final class Prefs: ObservableObject {
     var spriteColors: SpriteColors { SpriteColors.make(paletteBase) }
 
     var theme: ThemeColors { uiTheme.colors }
+
+    /// Where the pet lives: on the desktop (just above the icons, behind your app windows) by default,
+    /// or floating above every window when "Float above other windows" is on.
+    var petWindowLevel: NSWindow.Level {
+        alwaysOnTop ? .floating : NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)) + 1)
+    }
+
+    /// For things that belong to the pet (speech bubble, surprise package) — just above it.
+    var petAccessoryLevel: NSWindow.Level { NSWindow.Level(rawValue: petWindowLevel.rawValue + 1) }
 
     func apply(_ m: VibeMode) {
         mode = m

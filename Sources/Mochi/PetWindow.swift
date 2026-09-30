@@ -217,8 +217,9 @@ final class PetController {
     private var currentSize: CGFloat { CGFloat(32 * prefs.petScale) * (giant ? 2 : 1) }
 
     private func configure(_ p: NSPanel) {
-        p.level = prefs.alwaysOnTop ? .floating : .normal
+        p.level = prefs.petWindowLevel
         var behavior: NSWindow.CollectionBehavior = [.fullScreenAuxiliary, .ignoresCycle]
+        if !prefs.alwaysOnTop { behavior.insert(.stationary) } // stays put on the desktop in Mission Control
         behavior.insert(prefs.allSpaces ? .canJoinAllSpaces : .moveToActiveSpace)
         p.collectionBehavior = behavior
     }

@@ -58,6 +58,7 @@ Mochi lives in the **menu bar** (no Dock icon). Copy it to `/Applications` if yo
 | **Left-click** the pet | A little to-do box pops up beside it — type, press Return, tick things off. Esc or click the pet again to close. |
 | **Right-click** the pet | Actions: stats line, Add a To-do, To-do List, **Focus ▸**, **Feed ▸**, **Play ▸** (zoomies, rock-paper-scissors), Head Pats, Nap / Wake, **Give ▸** treasures, Closet, Shop, Scrapbook, Hide, Settings |
 | **Drag** it | Moves it; hover shows your pinned to-do |
+| Where it lives | **On your desktop** by default — behind your app windows, like a desktop widget. Turn on *Float above other windows* (Settings → Desktop & Shortcut, or during onboarding) to keep it in view over your apps. |
 | **⌃⌥⌘Space** | Summons the pet and opens the to-do box (changeable) |
 
 **To-dos** — add from the quick box or the full list (right-click → To-do List). Check items off (+1 🪙 and a little celebration), pin one to see it when hovering the pet, clear finished ones. The pet occasionally nudges you about what's left.

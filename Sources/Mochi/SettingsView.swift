@@ -342,7 +342,10 @@ struct GeneralPage: View {
         Card(title: "ON THE DESKTOP") {
             Toggle("Show \(prefs.petName) on the desktop", isOn: $prefs.petVisible)
             Toggle("Float above other windows", isOn: $prefs.alwaysOnTop)
-            Toggle("Visible on every Space (desktop)", isOn: $prefs.allSpaces)
+            Note(text: prefs.alwaysOnTop
+                 ? "\(prefs.petName) floats over every app."
+                 : "\(prefs.petName) lives on your desktop, behind your app windows — like a desktop widget. Turn this on to keep it in view over your apps.")
+            Toggle("Visible on every Space (virtual desktop)", isOn: $prefs.allSpaces)
             Toggle("A \(prefs.petName) on every display", isOn: $prefs.everyDisplay)
             Note(text: NSScreen.screens.count > 1
                  ? "With \(NSScreen.screens.count) displays you'll get one on each. They move together in spirit — hover or click any of them and it becomes the “real” one."

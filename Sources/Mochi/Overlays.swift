@@ -82,6 +82,7 @@ final class SpeechBubble {
     func show(_ text: String, near pet: NSWindow, duration: TimeInterval = 5) {
         lastText = text
         isShowing = true
+        panel.level = Prefs.shared.petAccessoryLevel
         place(near: pet)
         panel.alphaValue = 0
         panel.orderFrontRegardless()
@@ -190,6 +191,7 @@ final class ActorLayer {
             view.origin = vf.origin
             panel.orderFrontRegardless()
         }
+        panel.level = Prefs.shared.petWindowLevel
         view.actors.append(a)
         startTimer()
     }
@@ -278,6 +280,7 @@ final class PropPanel {
     var isVisible: Bool { panel.isVisible }
 
     func show(_ icon: PixelIcon, scale: CGFloat, beside pet: NSRect) {
+        panel.level = Prefs.shared.petAccessoryLevel
         view.image = icon.cgImage()
         let w = CGFloat(icon.width) * scale + 8, h = CGFloat(icon.height) * scale + 8
         panel.setFrame(NSRect(x: pet.minX - w + 6, y: pet.minY, width: w, height: h), display: true)
