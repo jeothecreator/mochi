@@ -38,10 +38,11 @@ struct SettingsRoot: View {
     var body: some View {
         HStack(spacing: 0) {
             sidebar
+            Divider()
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text(nav.page.label.uppercased())
-                        .font(RetroFont.bold(18))
+                VStack(alignment: .leading, spacing: 18) {
+                    Text(nav.page.label)
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
                         .padding(.bottom, 2)
                     switch nav.page {
                     case .creature: CreaturePage()
@@ -49,72 +50,129 @@ struct SettingsRoot: View {
                     case .senses: SensesPage()
                     case .scrapbook:
                         ScrapbookTab()
-                            .padding(12)
-                            .background(prefs.theme.bg)
+                            .padding(14)
+                            .background(prefs.theme.bg, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                             .environment(\.colorScheme, prefs.uiTheme.isDark ? .dark : .light)
                     case .general: GeneralPage()
                     case .about: AboutPage()
                     }
                 }
-                .padding(22)
+                .toggleStyle(SettingsSwitchStyle())
+                .padding(.horizontal, 28)
+                .padding(.vertical, 24)
+                .frame(maxWidth: 640, alignment: .leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .background(Color(nsColor: .windowBackgroundColor))
         }
-        .frame(minWidth: 760, minHeight: 580)
+        .frame(minWidth: 780, minHeight: 580)
+    }
+
+    private var version: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
     }
 
     private var sidebar: some View {
-        let t = UITheme.cafe.colors
-        return VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
-                SpriteImage(look: prefs.look, colors: prefs.spriteColors, size: 40)
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(prefs.petName).font(RetroFont.bold(14)).foregroundStyle(t.ink).lineLimit(1)
-                    Text("settings.cfg").font(RetroFont.body(10)).foregroundStyle(t.subInk)
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 10) {
+                SpriteImage(look: prefs.look, colors: prefs.spriteColors, size: 34)
+                    .frame(width: 42, height: 42)
+                    .background(prefs.theme.bg, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(.primary.opacity(0.08)))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(prefs.petName).font(.system(size: 14, weight: .semibold, design: .rounded)).lineLimit(1)
+                    Text("Mochi \(version) · offline").font(.system(size: 11)).foregroundStyle(.secondary)
                 }
             }
-            .padding(.bottom, 10)
+            .padding(.horizontal, 6)
+            .padding(.bottom, 14)
             ForEach(SettingsPage.allCases) { page in
+                let on = nav.page == page
                 Button {
                     nav.page = page
                 } label: {
-                    Label(page.label, systemImage: page.symbol)
-                        .font(RetroFont.bold(12))
-                        .foregroundStyle(nav.page == page ? t.titleInk : t.ink)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 8).padding(.vertical, 6)
-                        .background(PixelRect(notch: 2).fill(nav.page == page ? t.titleBar : .clear))
-                        .contentShape(Rectangle())
+                    HStack(spacing: 9) {
+                        Image(systemName: page.symbol)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 22, height: 22)
+                            .background(page.tint.gradient, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        Text(page.label).font(.system(size: 13)).foregroundStyle(on ? Color.white : Color.primary)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 6).padding(.vertical, 5)
+                    .background(on ? Color.accentColor : .clear, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityAddTraits(nav.page == page ? .isSelected : [])
+                .accessibilityAddTraits(on ? .isSelected : [])
             }
             Spacer()
-            Text("v1.0 · local-first")
-                .font(RetroFont.body(10))
-                .foregroundStyle(t.subInk)
         }
-        .padding(14)
-        .frame(width: 210)
+        .padding(12)
+        .frame(width: 220)
         .frame(maxHeight: .infinity)
-        .background(t.panel)
-        .overlay(alignment: .trailing) { Rectangle().fill(t.border).frame(width: 2) }
+        .background(VisualEffect(material: .sidebar))
+    }
+}
+
+/// System Settings-style row: label on the left, small switch on the right.
+struct SettingsSwitchStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            configuration.label
+            Spacer(minLength: 8)
+            Toggle("", isOn: configuration.$isOn)
+                .toggleStyle(.switch)
+                .controlSize(.small)
+                .labelsHidden()
+        }
+    }
+}
+
+/// NSVisualEffectView for native translucent materials (sidebar).
+struct VisualEffect: NSViewRepresentable {
+    var material: NSVisualEffectView.Material
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let v = NSVisualEffectView()
+        v.material = material
+        v.blendingMode = .behindWindow
+        v.state = .followsWindowActiveState
+        return v
+    }
+    func updateNSView(_ v: NSVisualEffectView, context: Context) { v.material = material }
+}
+
+extension SettingsPage {
+    var tint: Color {
+        switch self {
+        case .creature: return .pink
+        case .motion: return .purple
+        case .senses: return .blue
+        case .scrapbook: return .orange
+        case .general: return .gray
+        case .about: return .green
+        }
     }
 }
 
 // MARK: - Shared bits
 
+/// A grouped section like System Settings: small caption + rounded content panel.
 struct Card<Content: View>: View {
     var title: String
     @ViewBuilder var content: Content
     var body: some View {
-        GroupBox {
-            VStack(alignment: .leading, spacing: 10) { content }
+        VStack(alignment: .leading, spacing: 7) {
+            Text(title.prefix(1).uppercased() + title.dropFirst().lowercased())
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .padding(.leading, 4)
+            VStack(alignment: .leading, spacing: 12) { content }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(6)
-        } label: {
-            Text(title).font(RetroFont.bold(12))
+                .padding(14)
+                .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(.primary.opacity(0.08)))
         }
     }
 }
@@ -140,19 +198,19 @@ struct ThumbGrid<Item: Identifiable & Equatable, Thumb: View>: View {
     @ViewBuilder var thumb: (Item) -> Thumb
 
     var body: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 74), spacing: 8)], spacing: 8) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 8)], spacing: 8) {
             ForEach(items) { item in
                 let selected = item == selection
                 Button { selection = item } label: {
                     VStack(spacing: 3) {
                         thumb(item)
-                        Text(label(item)).font(.system(size: 10, weight: selected ? .bold : .regular, design: .monospaced))
+                        Text(label(item)).font(.system(size: 11, weight: selected ? .semibold : .regular, design: Prefs.shared.retroFrames ? .monospaced : .rounded))
                             .lineLimit(1)
                     }
                     .padding(5)
                     .frame(maxWidth: .infinity)
                     .background(PixelRect(notch: 3).fill(selected ? accent.opacity(0.18) : Color.primary.opacity(0.04)))
-                    .overlay(PixelRect(notch: 3).strokeBorderCompat(selected ? accent : Color.primary.opacity(0.15), lineWidth: 2, notch: 3))
+                    .overlay(PixelRect(notch: 3).strokeBorderCompat(selected ? accent : Color.primary.opacity(Prefs.shared.retroFrames ? 0.15 : 0.08), lineWidth: selected || Prefs.shared.retroFrames ? 2 : 1, notch: 3))
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -220,7 +278,7 @@ struct CreaturePage: View {
                 guard PetLife.shared.isUnlocked(acc) else { return }
                 prefs.accessory = acc
                 PetLife.shared.triedAccessory(acc)
-            }), label: { PetLife.shared.isUnlocked($0) ? $0.label : "Secret" }, locked: { !PetLife.shared.isUnlocked($0) }) { acc in
+            }), label: { acc in PetLife.shared.isUnlocked(acc) ? acc.label : (ShopItem.item(for: acc).map { "Shop · \($0.price) 🪙" } ?? "Secret") }, locked: { !PetLife.shared.isUnlocked($0) }) { acc in
                 if PetLife.shared.isUnlocked(acc) {
                     var look = prefs.look
                     let _ = (look.accessory = acc)
@@ -269,7 +327,7 @@ struct CreaturePage: View {
             SpriteImage(look: prefs.look, pose: pose, colors: prefs.spriteColors, size: 160)
         }
         .padding(8)
-        .retroBox(fill: RGBA(hex: "#E9DCC4").color, border: RGBA(hex: "#3B2A22").color, shadow: RGBA(hex: "#3B2A22").color, notch: 4, line: 3, offset: 4)
+        .retroBox(fill: prefs.theme.wall, border: RGBA(hex: "#3B2A22").color, shadow: RGBA(hex: "#3B2A22").color, notch: 4, line: Prefs.shared.retroFrames ? 3 : 1, offset: 4)
         .accessibilityLabel("Preview of \(prefs.petName)")
     }
 }
@@ -293,20 +351,21 @@ struct MotionPage: View {
             .pickerStyle(.segmented)
             .frame(maxWidth: 380)
             Note(text: "Still: only blinks. Calm: slow breathing and the occasional sip. Lively: hops and wiggles. No sounds, ever.")
-            Picker("Nap when you're away from the keyboard", selection: $prefs.napMinutes) {
+            Picker("Nap when you're away", selection: $prefs.napMinutes) {
                 Text("Never").tag(0)
                 Text("After 5 min").tag(5)
                 Text("After 15 min").tag(15)
                 Text("After 30 min").tag(30)
             }
-            .frame(maxWidth: 300)
+            .frame(maxWidth: 360)
+            .help("Naps after this long without keyboard or mouse input")
             if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
                 Note(text: "Reduce Motion is on in System Settings, so movement is kept to blinks and quiet state changes.", symbol: "figure.walk.motion")
             }
         }
         Card(title: "RETRO EFFECTS") {
+            Toggle("Retro pixel frames (the classic chunky look)", isOn: $prefs.retroFrames)
             Toggle("CRT scanlines on the creature", isOn: $prefs.scanlines)
-            Toggle("Typewriter text for replies", isOn: $prefs.typewriter)
         }
         Card(title: "APP THEME") {
             ThumbGrid(items: UITheme.allCases, selection: $prefs.uiTheme, label: { $0.label }) { theme in
@@ -323,7 +382,7 @@ struct MotionPage: View {
                     .background(c.bg)
                 }
                 .frame(width: 70, height: 46)
-                .overlay(Rectangle().stroke(c.border, lineWidth: 2))
+                .outline(c.border, 2)
             }
         }
     }

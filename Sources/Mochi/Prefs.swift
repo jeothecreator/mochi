@@ -54,6 +54,7 @@ final class Prefs: ObservableObject {
     @Published var intensity: Intensity { didSet { d.set(intensity.rawValue, forKey: "intensity") } }
     @Published var napMinutes: Int { didSet { d.set(napMinutes, forKey: "napMinutes") } }
     @Published var scanlines: Bool { didSet { d.set(scanlines, forKey: "scanlines") } }
+    @Published var retroFrames: Bool { didSet { d.set(retroFrames, forKey: "retroFrames") } }
     @Published var typewriter: Bool { didSet { d.set(typewriter, forKey: "typewriter") } }
     @Published var uiTheme: UITheme { didSet { d.set(uiTheme.rawValue, forKey: "uiTheme") } }
     @Published var mode: VibeMode { didSet { d.set(mode.rawValue, forKey: "mode") } }
@@ -130,6 +131,7 @@ final class Prefs: ObservableObject {
         intensity = Intensity(rawValue: str("intensity") ?? "") ?? .calm
         napMinutes = int("napMinutes", 15)
         scanlines = bool("scanlines", false)
+        retroFrames = bool("retroFrames", false)
         typewriter = bool("typewriter", true)
         uiTheme = UITheme(rawValue: str("uiTheme") ?? "") ?? .cafe
         mode = VibeMode(rawValue: str("mode") ?? "") ?? .cafe

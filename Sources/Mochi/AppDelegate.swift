@@ -193,10 +193,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if let w = onboardingWindow {
             NSApp.activate(); w.makeKeyAndOrderFront(nil); return
         }
-        let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 580),
+        let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 700, height: 600),
                          styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
         w.titlebarAppearsTransparent = true
         w.titleVisibility = .hidden
+        w.isMovableByWindowBackground = true
+        // Match the window (traffic lights, title bar) to the chosen vibe, live.
+        let applyAppearance = { [weak w] in w?.appearance = NSAppearance(named: Prefs.shared.uiTheme.isDark ? .darkAqua : .aqua) }
+        applyAppearance()
+        prefs.$uiTheme.receive(on: RunLoop.main).sink { _ in applyAppearance() }.store(in: &cancellables)
         w.title = "Welcome"
         w.isReleasedWhenClosed = false
         w.contentView = NSHostingView(rootView: OnboardingView { [weak self] in

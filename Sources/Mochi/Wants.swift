@@ -137,12 +137,8 @@ struct WantRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
-            Button { life.toggleGot(item.id) } label: {
-                ZStack {
-                    Rectangle().fill(item.isGot ? t.accent : t.petBubble).frame(width: 16, height: 16)
-                    Rectangle().stroke(t.border, lineWidth: 2).frame(width: 16, height: 16)
-                    if item.isGot { Image(systemName: "checkmark").font(.system(size: 10, weight: .heavy)).foregroundStyle(t.bg) }
-                }
+            Button { withAnimation(Motion.ifAllowed(Motion.easeOut)) { life.toggleGot(item.id) } } label: {
+                CheckBox(on: item.isGot, t: t)
             }
             .buttonStyle(.plain)
             .help(item.isGot ? "Move back to wants" : "Got it!")
@@ -176,9 +172,9 @@ struct WantRow: View {
             }
             icon("trash", "Delete") { life.deleteWant(item.id) }
         }
-        .padding(10)
+        .padding(12)
         .background(t.petBubble)
-        .overlay(Rectangle().stroke(t.border.opacity(0.35), lineWidth: 1.5))
+        .outline(t.border.opacity(Prefs.shared.retroFrames ? 0.35 : 0.14), 1)
     }
 
     private func icon(_ symbol: String, _ help: String, action: @escaping () -> Void) -> some View {

@@ -51,7 +51,9 @@ final class PetPopover {
         onShow?()
         position()
         NSApp.activate()
+        let wasVisible = panel.isVisible
         panel.makeKeyAndOrderFront(nil)
+        if !wasVisible { Motion.fadeIn(panel, duration: 0.12) }
         if escMonitor == nil {
             escMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] e in
                 guard let self, e.keyCode == 53, e.window === self.panel else { return e }
@@ -95,14 +97,11 @@ struct PopoverChrome<Content: View>: View {
     var body: some View {
         let t = prefs.theme
         content
-            .padding(10)
-            .frame(width: width - 10)
+            .padding(12)
+            .frame(width: width - (Prefs.shared.retroFrames ? 10 : 24))
             .fixedSize(horizontal: false, vertical: true)
             .background(t.bg)
-            .clipShape(PixelRect(notch: t.rounded ? 0 : 3))
-            .overlay(PixelRect(notch: t.rounded ? 0 : 3).strokeBorderCompat(t.border, lineWidth: t.rounded ? 1.5 : 2.5, notch: t.rounded ? 0 : 3))
-            .background(PixelRect(notch: t.rounded ? 0 : 3).fill(t.shadow.opacity(0.85)).offset(x: 4, y: 4))
-            .padding(EdgeInsets(top: 1, leading: 1, bottom: 6, trailing: 6))
+            .windowChrome(t)
             .fixedSize(horizontal: false, vertical: true)
             .environment(\.colorScheme, prefs.uiTheme.isDark ? .dark : .light)
             .tint(t.accent)
@@ -158,7 +157,7 @@ struct QuickTodoView: View {
                     SpriteImage(look: prefs.look, pose: Pose(expression: .happy), colors: prefs.spriteColors, size: 22)
                     Text("\(prefs.petName)'s list").font(t.font(12, .bold)).foregroundStyle(t.ink).lineLimit(1)
                     Spacer()
-                    ChromeButton(symbol: "list.bullet", help: "Open full list", action: openList)
+                    ChromeButton(symbol: "arrow.up.left.and.arrow.down.right", help: "Open the full list", action: openList)
                     ChromeButton(symbol: "xmark", help: "Close (Esc)", action: close)
                 }
                 if focus.isRunning { focusBar }
@@ -201,7 +200,7 @@ struct QuickTodoView: View {
             }
             .padding(.horizontal, 6).padding(.vertical, 4)
             .background(t.accent.opacity(0.15))
-            .overlay(Rectangle().stroke(t.accent.opacity(0.6), lineWidth: 1.5))
+            .outline(t.accent.opacity(0.6), 1.5)
         }
     }
 }
@@ -277,7 +276,11 @@ struct RPSView: View {
                         }
                     }
                 }
-                Text("win a match: +2 🪙 · \(life.s.rpsWins) wins so far").font(t.font(9)).foregroundStyle(t.subInk)
+                HStack(spacing: 4) {
+                    Text("Win a match: +2").font(t.font(10)).foregroundStyle(t.subInk)
+                    IconImage(icon: .coin, scale: 1.25)
+                    Text("· \(life.s.rpsWins) wins so far").font(t.font(10)).foregroundStyle(t.subInk)
+                }
             }
         }
     }

@@ -68,7 +68,9 @@ final class HomeController {
         if let tab { nav.tab = tab }
         position()
         NSApp.activate()
+        let wasVisible = panel.isVisible
         panel.makeKeyAndOrderFront(nil)
+        if !wasVisible { Motion.fadeIn(panel, duration: 0.16) }
         if escMonitor == nil {
             escMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] e in
                 guard let self, e.keyCode == 53, e.window === self.panel else { return e }
@@ -135,77 +137,90 @@ struct HomeView: View {
             t.bg
             if prefs.uiTheme == .psp { WaveBackground(tint: t.accent) }
         })
-        .clipShape(PixelRect(notch: t.rounded ? 0 : 4))
-        .overlay(PixelRect(notch: t.rounded ? 0 : 4).strokeBorderCompat(t.border, lineWidth: t.rounded ? 1.5 : 3, notch: t.rounded ? 0 : 4))
-        .background(PixelRect(notch: t.rounded ? 0 : 4).fill(t.shadow.opacity(0.9)).offset(x: 5, y: 5))
-        .padding(EdgeInsets(top: 2, leading: 2, bottom: 8, trailing: 8))
+        .windowChrome(t)
         .environment(\.colorScheme, prefs.uiTheme.isDark ? .dark : .light)
         .tint(t.accent)
     }
 
     // MARK: Header
 
+    private var retro: Bool { prefs.retroFrames && !t.rounded }
+
     private var header: some View {
-        HStack(spacing: 8) {
-            SpriteImage(look: prefs.look, colors: prefs.spriteColors, size: 26)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(prefs.uiTheme == .psp ? prefs.petName : "\(prefs.petName.uppercased()).EXE")
-                    .font(t.font(13, .bold))
-                    .foregroundStyle(t.titleInk)
+        HStack(spacing: 10) {
+            SpriteImage(look: prefs.look, colors: prefs.spriteColors, size: retro ? 26 : 34)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(retro ? "\(prefs.petName.uppercased()).EXE" : prefs.petName)
+                    .font(t.font(retro ? 13 : 15, .bold))
+                    .foregroundStyle(retro ? t.titleInk : t.ink)
                     .lineLimit(1)
-                HStack(spacing: 4) {
-                    Text("LV \(life.level)").font(t.font(9, .bold)).foregroundStyle(t.titleInk.opacity(0.8))
-                    ProgressBar(value: life.levelProgress, fill: t.accent, track: t.titleInk.opacity(0.25), segments: 10)
-                        .frame(width: 60, height: 5)
+                HStack(spacing: 6) {
+                    Text("Level \(life.level)").font(t.font(10, .semibold)).foregroundStyle(retro ? t.titleInk.opacity(0.8) : t.subInk)
+                    ProgressBar(value: life.levelProgress, fill: t.accent, track: (retro ? t.titleInk : t.ink).opacity(0.15), segments: retro ? 10 : 1)
+                        .frame(width: 64, height: retro ? 5 : 4)
+                        .clipShape(Capsule())
                 }
             }
             Spacer(minLength: 4)
-            HStack(spacing: 3) {
-                IconImage(icon: .coin, scale: 1.75)
-                Text("\(life.s.coins)").font(t.font(12, .bold)).foregroundStyle(t.titleInk)
+            HStack(spacing: 4) {
+                IconImage(icon: .coin, scale: 1.6)
+                Text("\(life.s.coins)").font(t.font(12, .bold)).foregroundStyle(retro ? t.titleInk : t.ink).monospacedDigit()
             }
-            .help("Coins — earned by hanging out, events and achievements")
+            .padding(.horizontal, retro ? 0 : 8).padding(.vertical, retro ? 0 : 4)
+            .background(retro ? Color.clear : t.ink.opacity(0.06), in: Capsule())
+            .help("Coins — from to-dos, focus sessions, games, events and achievements")
             titleButton("gearshape", help: "Settings") { AppDelegate.shared?.openSettings(.creature) }
             titleButton("xmark", help: "Close (Esc)", action: onClose)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(ZStack { t.titleBar; WindowDragArea() })
+        .padding(.horizontal, retro ? 10 : 14)
+        .padding(.top, retro ? 7 : 12)
+        .padding(.bottom, retro ? 7 : 8)
+        .background(ZStack { retro ? t.titleBar : Color.clear; WindowDragArea() })
     }
 
     private func titleButton(_ symbol: String, help: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(t.titleBar)
-                .frame(width: 20, height: 18)
-                .background(PixelRect(notch: t.rounded ? 0 : 2).fill(t.titleInk).clipShape(RoundedRectangle(cornerRadius: t.rounded ? 5 : 0)))
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(retro ? t.titleBar : t.subInk)
+                .frame(width: 26, height: 26)
+                .background {
+                    if retro { PixelRect(notch: 2).fill(t.titleInk).frame(width: 20, height: 18) } else { Circle().fill(t.ink.opacity(0.06)) }
+                }
+                .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableStyle())
         .help(help)
         .accessibilityLabel(help)
     }
 
     // MARK: Tabs
 
+    @Namespace private var tabIndicator
+
     private var tabBar: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: retro ? 4 : 2) {
             ForEach(tabs) { tab in
                 let on = nav.tab == tab
-                Button { nav.tab = tab } label: {
-                    VStack(spacing: 2) {
-                        Image(systemName: tab.symbol).font(.system(size: prefs.uiTheme == .psp ? 15 : 12, weight: .semibold))
-                        Text(tab.label).font(t.font(10, on ? .bold : .regular))
+                Button {
+                    withAnimation(Motion.ifAllowed(Motion.tab)) { nav.tab = tab }
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: tab.symbol).font(.system(size: 11, weight: .semibold))
+                        Text(tab.label).font(t.font(11.5, on ? .semibold : .medium))
                     }
-                    .foregroundStyle(on ? (prefs.uiTheme == .psp ? t.ink : t.bg) : t.subInk)
+                    .foregroundStyle(on ? (retro ? t.bg : t.ink) : t.subInk)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 5)
+                    .padding(.vertical, retro ? 6 : 6)
                     .background {
                         if on {
-                            if prefs.uiTheme == .psp {
-                                Capsule().fill(t.accent.opacity(0.25)).shadow(color: t.accent.opacity(0.8), radius: 6)
-                            } else {
+                            if retro {
                                 PixelRect(notch: 2).fill(t.accent)
+                            } else {
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(prefs.uiTheme.isDark ? t.ink.opacity(0.14) : t.petBubble)
+                                    .shadow(color: .black.opacity(0.10), radius: 2, y: 1)
+                                    .matchedGeometryEffect(id: "tab", in: tabIndicator)
                             }
                         }
                     }
@@ -216,10 +231,17 @@ struct HomeView: View {
                 .accessibilityAddTraits(on ? .isSelected : [])
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .background(t.panel.opacity(prefs.uiTheme == .psp ? 0.5 : 1))
-        .overlay(alignment: .bottom) { Rectangle().fill(t.border.opacity(0.4)).frame(height: 2) }
+        .padding(retro ? 6 : 3)
+        .background {
+            if retro {
+                t.panel
+            } else {
+                RoundedRectangle(cornerRadius: 10, style: .continuous).fill(t.ink.opacity(0.06))
+            }
+        }
+        .padding(.horizontal, retro ? 0 : 14)
+        .padding(.bottom, retro ? 0 : 6)
+        .overlay(alignment: .bottom) { if retro { Rectangle().fill(t.border.opacity(0.4)).frame(height: 2) } }
     }
 }
 
@@ -233,12 +255,19 @@ struct ProgressBar: View {
 
     var body: some View {
         GeometryReader { geo in
-            HStack(spacing: 1) {
-                ForEach(0..<segments, id: \.self) { i in
-                    Rectangle().fill(Double(i) < value * Double(segments) ? fill : track)
+            if segments <= 1 {
+                ZStack(alignment: .leading) {
+                    Capsule().fill(track)
+                    Capsule().fill(fill).frame(width: max(geo.size.height, geo.size.width * min(1, max(0, value))))
                 }
+            } else {
+                HStack(spacing: 1) {
+                    ForEach(0..<segments, id: \.self) { i in
+                        Rectangle().fill(Double(i) < value * Double(segments) ? fill : track)
+                    }
+                }
+                .frame(width: geo.size.width, height: geo.size.height)
             }
-            .frame(width: geo.size.width, height: geo.size.height)
         }
         .accessibilityValue("\(Int(value * 100)) percent")
     }
@@ -365,12 +394,8 @@ struct TodoRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
-            Button { director.toggleTodo(note.id) } label: {
-                ZStack {
-                    Rectangle().fill(note.isDone ? t.accent : t.petBubble).frame(width: 16, height: 16)
-                    Rectangle().stroke(t.border, lineWidth: 2).frame(width: 16, height: 16)
-                    if note.isDone { Image(systemName: "checkmark").font(.system(size: 10, weight: .heavy)).foregroundStyle(t.bg) }
-                }
+            Button { withAnimation(Motion.ifAllowed(Motion.easeOut)) { director.toggleTodo(note.id) } } label: {
+                CheckBox(on: note.isDone, t: t)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(note.isDone ? "Mark not done" : "Mark done")
@@ -395,10 +420,11 @@ struct TodoRow: View {
                 Image(systemName: "pin.fill").font(.system(size: 10)).foregroundStyle(t.accent).accessibilityLabel("Pinned")
             }
         }
-        .padding(.horizontal, compact ? 4 : 10)
-        .padding(.vertical, compact ? 3 : 8)
+        .padding(.horizontal, compact ? 4 : 12)
+        .padding(.vertical, compact ? 4 : 10)
         .background(compact ? Color.clear : t.petBubble)
-        .overlay(compact ? nil : Rectangle().stroke(note.pinned ? t.accent : t.border.opacity(0.35), lineWidth: note.pinned ? 2.5 : 1.5))
+        .modifier(RowOutline(show: !compact, color: note.pinned ? t.accent : t.border.opacity(Prefs.shared.retroFrames ? 0.35 : 0.14),
+                             width: note.pinned ? 2 : 1))
     }
 
     private func iconButton(_ symbol: String, _ help: String, action: @escaping () -> Void) -> some View {
@@ -406,6 +432,15 @@ struct TodoRow: View {
             .buttonStyle(.plain)
             .help(help)
             .accessibilityLabel(help)
+    }
+}
+
+struct RowOutline: ViewModifier {
+    var show: Bool
+    var color: Color
+    var width: CGFloat
+    func body(content: Content) -> some View {
+        if show { content.outline(color, width) } else { content }
     }
 }
 
@@ -419,13 +454,9 @@ struct ClosetTab: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             SectionTitle(text: "Modes")
-            ScrollView(.horizontal) {
-                HStack(spacing: 8) {
-                    ForEach(VibeMode.allCases) { m in ModeCard(mode: m, selected: prefs.mode == m) { prefs.apply(m) } }
-                }
-                .padding(2)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 88), spacing: 8)], spacing: 8) {
+                ForEach(VibeMode.allCases) { m in ModeCard(mode: m, selected: prefs.mode == m) { prefs.apply(m) } }
             }
-            .scrollIndicators(.never)
 
             SectionTitle(text: "Species")
             ThumbGrid(items: Species.allCases, selection: $prefs.species, label: { $0.label }, accent: t.accent) { sp in
@@ -494,7 +525,7 @@ struct ModeCard: View {
             }
             .padding(5)
             .background(c.panel)
-            .overlay(Rectangle().stroke(selected ? c.accent : c.border.opacity(0.5), lineWidth: selected ? 3 : 1.5))
+            .outline(selected ? c.accent : c.border.opacity(0.5), selected ? 3 : 1.5)
         }
         .buttonStyle(.plain)
         .help(mode.tagline)
@@ -517,7 +548,10 @@ struct ShopTab: View {
                 IconImage(icon: .bag, scale: 3)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Coin shop").font(t.font(14, .bold)).foregroundStyle(t.ink)
-                    Text("You have \(life.s.coins) 🪙").font(t.font(11)).foregroundStyle(t.subInk)
+                    HStack(spacing: 4) {
+                        Text("You have \(life.s.coins)").font(t.font(11)).foregroundStyle(t.subInk)
+                        IconImage(icon: .coin, scale: 1.4)
+                    }
                 }
             }
             Text("Earn coins by finishing to-dos (+1), focus sessions (+3), rock-paper-scissors wins (+2), random events and achievements.")
@@ -563,7 +597,12 @@ struct ShopTab: View {
                     .buttonStyle(t.quietButton)
                     .disabled(wearing(item))
             } else {
-                Button("\(item.price) 🪙") { _ = director.buy(item) }
+                Button { _ = director.buy(item) } label: {
+                    HStack(spacing: 4) {
+                        Text("\(item.price)").monospacedDigit()
+                        IconImage(icon: .coin, scale: 1.5)
+                    }
+                }
                     .buttonStyle(t.button)
                     .opacity(life.s.coins >= item.price ? 1 : 0.5)
                     .help(life.s.coins >= item.price ? "Buy \(item.label)" : "You need \(item.price - life.s.coins) more coins")
@@ -680,7 +719,7 @@ struct ScrapbookTab: View {
                     .padding(5)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(t.petBubble.opacity(got ? 1 : 0.5))
-                    .overlay(Rectangle().stroke(got ? t.accent : t.border.opacity(0.3), lineWidth: got ? 2 : 1))
+                    .outline(got ? t.accent : t.border.opacity(0.3), got ? 2 : 1)
                     .accessibilityElement(children: .combine)
                 }
             }

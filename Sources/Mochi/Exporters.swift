@@ -199,7 +199,7 @@ extension Exporters {
 
         // Speech bubbles at their measured size — nothing should be clipped.
         let bubble = SpeechBubble()
-        let samples = ["hey :)", "crunchy!!", "🐟 a GOLDEN fish swam by and dropped something! (check your items)",
+        let samples = ["hey :)", "crunchy!!", "🐟 a GOLDEN fish swam by and dropped something! (right-click me → Give)",
                        "🔓 secret outfit unlocked: Wizard hat! (Closet → Outfits)",
                        "that's 3 hours coding today — stretch break? 🧘",
                        "you're back!! i missed you 🥺 (i left you a note)",
@@ -242,7 +242,7 @@ extension Exporters {
             snapshot(SettingsRoot(nav: snav), size: NSSize(width: 780, height: 1000), to: out.appendingPathComponent("settings-\(page.rawValue).png"))
         }
         for step in 0..<7 {
-            snapshot(OnboardingView(onDone: {}, startStep: step), size: NSSize(width: 640, height: 580),
+            snapshot(OnboardingView(onDone: {}, startStep: step), size: NSSize(width: 700, height: 600),
                      to: out.appendingPathComponent("onboarding-\(step).png"))
         }
     }

@@ -34,11 +34,19 @@ struct BubbleView: View {
         .accessibilityLabel(text)
     }
 
+    @ViewBuilder
     private func tail(_ t: ThemeColors) -> some View {
-        VStack(spacing: 0) {
-            Rectangle().fill(t.border).frame(width: 10, height: 3)
-            Rectangle().fill(t.border).frame(width: 6, height: 3)
-            Rectangle().fill(t.border).frame(width: 2, height: 3)
+        if Prefs.shared.retroFrames {
+            VStack(spacing: 0) {
+                Rectangle().fill(t.border).frame(width: 10, height: 3)
+                Rectangle().fill(t.border).frame(width: 6, height: 3)
+                Rectangle().fill(t.border).frame(width: 2, height: 3)
+            }
+        } else {
+            BubbleTail().fill(t.petBubble)
+                .overlay(BubbleTail().stroke(t.border.opacity(0.16), lineWidth: 1))
+                .frame(width: 14, height: 7)
+                .offset(y: -1)
         }
     }
 }
@@ -84,9 +92,8 @@ final class SpeechBubble {
         isShowing = true
         panel.level = Prefs.shared.petAccessoryLevel
         place(near: pet)
-        panel.alphaValue = 0
         panel.orderFrontRegardless()
-        NSAnimationContext.runAnimationGroup { $0.duration = 0.18; panel.animator().alphaValue = 1 }
+        Motion.fadeIn(panel, duration: 0.15)
         hideWork?.cancel()
         let work = DispatchWorkItem { [weak self] in self?.hide() }
         hideWork = work
@@ -112,10 +119,21 @@ final class SpeechBubble {
         guard isShowing else { return }
         isShowing = false
         hideWork?.cancel()
-        NSAnimationContext.runAnimationGroup({ $0.duration = 0.2; panel.animator().alphaValue = 0 }) { [weak self] in
+        NSAnimationContext.runAnimationGroup({ $0.duration = 0.12; panel.animator().alphaValue = 0 }) { [weak self] in
             guard let self, !self.isShowing else { return }
             self.panel.orderOut(nil)
         }
+    }
+}
+
+/// Downward-pointing speech tail (open at the top so it merges into the bubble).
+struct BubbleTail: Shape {
+    func path(in r: CGRect) -> Path {
+        var p = Path()
+        p.move(to: CGPoint(x: r.minX, y: r.minY))
+        p.addLine(to: CGPoint(x: r.midX, y: r.maxY))
+        p.addLine(to: CGPoint(x: r.maxX, y: r.minY))
+        return p
     }
 }
 
